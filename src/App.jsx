@@ -25,6 +25,45 @@ const CONSTRUCTORS = [
   "Haas","McLaren","Mercedes","Racing Bulls","Red Bull","Williams",
 ];
 
+// Driver → Constructor mapping for 2026 season
+const DRIVER_CONSTRUCTOR = {
+  Russell:"Mercedes", Antonelli:"Mercedes",
+  Leclerc:"Ferrari",  Hamilton:"Ferrari",
+  Norris:"McLaren",   Piastri:"McLaren",
+  Verstappen:"Red Bull", Hadjar:"Red Bull",
+  Bearman:"Haas",     Ocon:"Haas",
+  Lindblad:"Racing Bulls", Lawson:"Racing Bulls",
+  Bortoleto:"Audi",   Hulkenberg:"Audi",
+  Gasly:"Alpine",     Colapinto:"Alpine",
+  Albon:"Williams",   Sainz:"Williams",
+  Perez:"Cadillac",   Bottas:"Cadillac",
+  Stroll:"Aston Martin", Alonso:"Aston Martin",
+};
+
+// F1 points for finishing positions P1–P10
+const F1_PTS = [25,18,15,12,10,8,6,4,2,1];
+
+// Auto-calculate constructor finishing order from driver finishing order.
+// Constructors are ranked by total F1 points scored by their two drivers.
+// Ties broken by the constructor whose best driver finished higher.
+function calcConstructorOrder(finishing_order) {
+  const pts = {};
+  const bestPos = {};
+  CONSTRUCTORS.forEach(c => { pts[c] = 0; bestPos[c] = 99; });
+
+  finishing_order.forEach((driver, i) => {
+    const team = DRIVER_CONSTRUCTOR[driver];
+    if (!team) return;
+    pts[team] += F1_PTS[i] ?? 0;
+    if (i < bestPos[team]) bestPos[team] = i;
+  });
+
+  return [...CONSTRUCTORS].sort((a, b) => {
+    if (pts[b] !== pts[a]) return pts[b] - pts[a];
+    return bestPos[a] - bestPos[b]; // lower index = higher finish = wins tie
+  });
+}
+
 const RACES = [
   { id:1,  name:"Australia",     date:"2026-03-08", flag:"🇦🇺" },
   { id:2,  name:"China",         date:"2026-03-15", flag:"🇨🇳" },
@@ -61,11 +100,13 @@ const TEAM_COLORS = {
 
 // ─── SEED DATA ────────────────────────────────────────────────────────────────
 
+const SEED_FINISHING_ORDER_R1 = ["Russell","Antonelli","Leclerc","Hamilton","Norris","Verstappen","Bearman","Lindblad","Bortoleto","Gasly","Ocon","Albon","Lawson","Colapinto","Sainz","Perez","Stroll","Alonso","Bottas","Hadjar","Piastri","Hulkenberg"];
+
 const SEED_RESULTS = {
   1: {
-    finishing_order: ["Russell","Antonelli","Leclerc","Hamilton","Norris","Verstappen","Bearman","Lindblad","Bortoleto","Gasly","Ocon","Albon","Lawson","Colapinto","Sainz","Perez","Stroll","Alonso","Bottas","Hadjar","Piastri","Hulkenberg"],
+    finishing_order: SEED_FINISHING_ORDER_R1,
     dnf1: "Hadjar",
-    constructor_order: ["Mercedes","Ferrari","McLaren","Red Bull","Haas","Racing Bulls","Audi","Alpine","Williams","Cadillac","Aston Martin"],
+    constructor_order: calcConstructorOrder(SEED_FINISHING_ORDER_R1),
   },
 };
 
@@ -701,19 +742,19 @@ function AdminPanel({ allResults, onSaveResults }) {
   const [selectedRace, setSelectedRace] = useState(1);
   const [order, setOrder] = useState([...DRIVERS]);
   const [dnf1, setDnf1] = useState("");
-  const [conOrder, setConOrder] = useState([...CONSTRUCTORS]);
   const [saved, setSaved] = useState(false);
+
+  // Auto-calculate constructor order live as driver order changes
+  const conOrder = calcConstructorOrder(order);
 
   useEffect(() => {
     const existing = allResults[selectedRace];
     if (existing) {
       setOrder(existing.finishing_order);
       setDnf1(existing.dnf1 || "");
-      setConOrder(existing.constructor_order);
     } else {
       setOrder([...DRIVERS]);
       setDnf1("");
-      setConOrder([...CONSTRUCTORS]);
     }
     setSaved(false);
   }, [selectedRace]);
@@ -724,14 +765,6 @@ function AdminPanel({ allResults, onSaveResults }) {
     if (j < 0 || j >= arr.length) return;
     [arr[i], arr[j]] = [arr[j], arr[i]];
     setOrder(arr);
-  };
-
-  const moveCon = (i, dir) => {
-    const arr = [...conOrder];
-    const j = i + dir;
-    if (j < 0 || j >= arr.length) return;
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-    setConOrder(arr);
   };
 
   const handleSave = () => {
@@ -745,6 +778,14 @@ function AdminPanel({ allResults, onSaveResults }) {
   };
 
   const race = RACES.find(r => r.id === selectedRace);
+
+  // Build a pts-per-team preview for display
+  const teamPts = {};
+  CONSTRUCTORS.forEach(c => { teamPts[c] = 0; });
+  order.forEach((driver, i) => {
+    const team = DRIVER_CONSTRUCTOR[driver];
+    if (team) teamPts[team] += F1_PTS[i] ?? 0;
+  });
 
   return (
     <div>
@@ -771,7 +812,7 @@ function AdminPanel({ allResults, onSaveResults }) {
 
         <div className="admin-form">
           <div className="admin-form-title">{race?.flag} {race?.name}</div>
-          <div className="admin-form-sub">Round {race?.id} · {race?.date} — use arrows to set finishing order</div>
+          <div className="admin-form-sub">Round {race?.id} · {race?.date} — set driver order, constructor ranking auto-calculates</div>
 
           <div className="admin-section-title">
             Finishing Order (P1 → P22)
@@ -781,7 +822,12 @@ function AdminPanel({ allResults, onSaveResults }) {
             {order.map((driver, i) => (
               <div key={driver} className="driver-order-item">
                 <span className="doi-pos">{i + 1}</span>
-                <span className="doi-name">{driver}</span>
+                <span className="doi-name">
+                  {driver}
+                  <span style={{fontSize:10,color:"#444",marginLeft:8,fontFamily:"'Barlow Condensed',sans-serif"}}>
+                    {DRIVER_CONSTRUCTOR[driver]}
+                  </span>
+                </span>
                 <button className="move-btn" onClick={() => moveDriver(i, -1)}>↑</button>
                 <button className="move-btn" onClick={() => moveDriver(i, 1)}>↓</button>
               </div>
@@ -789,24 +835,29 @@ function AdminPanel({ allResults, onSaveResults }) {
           </div>
 
           <div className="admin-section-title">First DNF (DNF1)</div>
-          <select className="form-select" style={{marginBottom:16}} value={dnf1} onChange={e => setDnf1(e.target.value)}>
+          <select className="form-select" style={{marginBottom:20}} value={dnf1} onChange={e => setDnf1(e.target.value)}>
             <option value="">None / No DNF</option>
             {DRIVERS.map(d => <option key={d} value={d}>{d}</option>)}
           </select>
 
           <div className="admin-section-title">
-            Constructor Order (P1 → P11)
-            <span className="reset-link" onClick={() => setConOrder([...CONSTRUCTORS])}>Reset</span>
+            Constructor Order — Auto-calculated ✓
           </div>
-          <div className="driver-order-list">
+          <div style={{background:"#0a0a0a",border:"1px solid #1a1a1a",borderRadius:6,padding:"12px 14px",marginBottom:8}}>
             {conOrder.map((team, i) => (
-              <div key={team} className="driver-order-item">
-                <span className="doi-pos">{i + 1}</span>
-                <span className="doi-name"><ConBadge team={team} /></span>
-                <button className="move-btn" onClick={() => moveCon(i, -1)}>↑</button>
-                <button className="move-btn" onClick={() => moveCon(i, 1)}>↓</button>
+              <div key={team} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"6px 0",borderBottom:i<conOrder.length-1?"1px solid #111":"none"}}>
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:16,color:"#333",width:24}}>{i+1}</span>
+                  <ConBadge team={team}/>
+                </div>
+                <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:12,color:"#555"}}>
+                  {teamPts[team]}pts
+                </span>
               </div>
             ))}
+          </div>
+          <div style={{fontSize:11,color:"#333",fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:"0.05em",marginBottom:16}}>
+            Ranked by F1 constructor points · ties broken by highest finishing driver
           </div>
 
           <div className="admin-save-row">
