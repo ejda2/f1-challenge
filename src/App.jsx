@@ -25,42 +25,62 @@ const CONSTRUCTORS = [
   "Haas","McLaren","Mercedes","Racing Bulls","Red Bull","Williams",
 ];
 
-// Driver → Constructor mapping for 2026 season
 const DRIVER_CONSTRUCTOR = {
-  Russell:"Mercedes", Antonelli:"Mercedes",
-  Leclerc:"Ferrari",  Hamilton:"Ferrari",
-  Norris:"McLaren",   Piastri:"McLaren",
+  Russell:"Mercedes",    Antonelli:"Mercedes",
+  Leclerc:"Ferrari",     Hamilton:"Ferrari",
+  Norris:"McLaren",      Piastri:"McLaren",
   Verstappen:"Red Bull", Hadjar:"Red Bull",
-  Bearman:"Haas",     Ocon:"Haas",
+  Bearman:"Haas",        Ocon:"Haas",
   Lindblad:"Racing Bulls", Lawson:"Racing Bulls",
-  Bortoleto:"Audi",   Hulkenberg:"Audi",
-  Gasly:"Alpine",     Colapinto:"Alpine",
-  Albon:"Williams",   Sainz:"Williams",
-  Perez:"Cadillac",   Bottas:"Cadillac",
+  Bortoleto:"Audi",      Hulkenberg:"Audi",
+  Gasly:"Alpine",        Colapinto:"Alpine",
+  Albon:"Williams",      Sainz:"Williams",
+  Perez:"Cadillac",      Bottas:"Cadillac",
   Stroll:"Aston Martin", Alonso:"Aston Martin",
 };
 
-// F1 points for finishing positions P1–P10
 const F1_PTS = [25,18,15,12,10,8,6,4,2,1];
 
-// Auto-calculate constructor finishing order from driver finishing order.
-// Constructors are ranked by total F1 points scored by their two drivers.
-// Ties broken by the constructor whose best driver finished higher.
+const RACE_RESULTS_LINKS = {
+  1:"https://www.formula1.com/en/results/2026/races/australia/race-result",
+  2:"https://www.formula1.com/en/results/2026/races/china/race-result",
+  3:"https://www.formula1.com/en/results/2026/races/japan/race-result",
+  4:"https://www.formula1.com/en/results/2026/races/bahrain/race-result",
+  5:"https://www.formula1.com/en/results/2026/races/saudi-arabia/race-result",
+  6:"https://www.formula1.com/en/results/2026/races/miami/race-result",
+  7:"https://www.formula1.com/en/results/2026/races/canada/race-result",
+  8:"https://www.formula1.com/en/results/2026/races/monaco/race-result",
+  9:"https://www.formula1.com/en/results/2026/races/spain/race-result",
+  10:"https://www.formula1.com/en/results/2026/races/austria/race-result",
+  11:"https://www.formula1.com/en/results/2026/races/great-britain/race-result",
+  12:"https://www.formula1.com/en/results/2026/races/belgium/race-result",
+  13:"https://www.formula1.com/en/results/2026/races/hungary/race-result",
+  14:"https://www.formula1.com/en/results/2026/races/netherlands/race-result",
+  15:"https://www.formula1.com/en/results/2026/races/italy/race-result",
+  16:"https://www.formula1.com/en/results/2026/races/madrid/race-result",
+  17:"https://www.formula1.com/en/results/2026/races/azerbaijan/race-result",
+  18:"https://www.formula1.com/en/results/2026/races/singapore/race-result",
+  19:"https://www.formula1.com/en/results/2026/races/united-states/race-result",
+  20:"https://www.formula1.com/en/results/2026/races/mexico/race-result",
+  21:"https://www.formula1.com/en/results/2026/races/brazil/race-result",
+  22:"https://www.formula1.com/en/results/2026/races/las-vegas/race-result",
+  23:"https://www.formula1.com/en/results/2026/races/qatar/race-result",
+  24:"https://www.formula1.com/en/results/2026/races/abu-dhabi/race-result",
+};
+
 function calcConstructorOrder(finishing_order) {
   const pts = {};
   const bestPos = {};
   CONSTRUCTORS.forEach(c => { pts[c] = 0; bestPos[c] = 99; });
-
   finishing_order.forEach((driver, i) => {
     const team = DRIVER_CONSTRUCTOR[driver];
     if (!team) return;
     pts[team] += F1_PTS[i] ?? 0;
     if (i < bestPos[team]) bestPos[team] = i;
   });
-
   return [...CONSTRUCTORS].sort((a, b) => {
     if (pts[b] !== pts[a]) return pts[b] - pts[a];
-    return bestPos[a] - bestPos[b]; // lower index = higher finish = wins tie
+    return bestPos[a] - bestPos[b];
   });
 }
 
@@ -95,7 +115,7 @@ const TEAM_COLORS = {
   Mercedes:"#00D2BE", Ferrari:"#DC0000", McLaren:"#FF8000",
   "Red Bull":"#3671C6", Haas:"#B6BABD", "Racing Bulls":"#6692FF",
   Audi:"#C0C0C0", Alpine:"#FF87BC", Williams:"#64C4FF",
-  Cadillac:"#333333", "Aston Martin":"#229971",
+  Cadillac:"#444444", "Aston Martin":"#229971",
 };
 
 // ─── SEED DATA ────────────────────────────────────────────────────────────────
@@ -111,21 +131,21 @@ const SEED_RESULTS = {
 };
 
 const SEED_PICKS = {
-  "Joe Jurasek":     { 1: { p10:"Gasly",      dnf1:"Perez",   constructor:"Mercedes"     }},
-  "Greg Angelo":     { 1: { p10:"Gasly",      dnf1:"Bearman", constructor:"Racing Bulls"  }},
-  "Katie Logue":     { 1: { p10:"Bortoleto",  dnf1:"Sainz",   constructor:"Mercedes"     }},
-  "Vic Woods":       { 1: { p10:"Bortoleto",  dnf1:"Stroll",  constructor:"Mercedes"     }},
-  "Claire Deakin":   { 1: { p10:"Albon",      dnf1:"Stroll",  constructor:"Mercedes"     }},
-  "Brett Sprinkel":  { 1: { p10:"Lawson",     dnf1:"Stroll",  constructor:"Mercedes"     }},
-  "Joe Deakin":      { 1: { p10:"Bearman",    dnf1:"Stroll",  constructor:"Mercedes"     }},
-  "Ted Deakin":      { 1: { p10:"Bearman",    dnf1:"Stroll",  constructor:"Mercedes"     }},
-  "Jason Hoey":      { 1: { p10:"Lawson",     dnf1:"Stroll",  constructor:"Mercedes"     }},
-  "Joel Greenfield": { 1: { p10:"Lawson",     dnf1:"Gasly",   constructor:"Mercedes"     }},
-  "Andy Jurasek":    { 1: { p10:"Bearman",    dnf1:"Alonso",  constructor:"Mercedes"     }},
-  "Will Deakin":     { 1: { p10:"Verstappen", dnf1:"Stroll",  constructor:"Mercedes"     }},
-  "Jim Deakin":      { 1: { p10:"Hulkenberg", dnf1:"Stroll",  constructor:"Mercedes"     }},
-  "Rick Pflasterer": { 1: { p10:"Hulkenberg", dnf1:"Stroll",  constructor:"Mercedes"     }},
-  "Sam Levine":      { 1: { p10:"Hulkenberg", dnf1:"Stroll",  constructor:"Red Bull"     }},
+  "Joe Jurasek":     { 1: { p10:"Gasly",      dnf1:"Perez",   constructor:"Mercedes"    }},
+  "Greg Angelo":     { 1: { p10:"Gasly",      dnf1:"Bearman", constructor:"Racing Bulls" }},
+  "Katie Logue":     { 1: { p10:"Bortoleto",  dnf1:"Sainz",   constructor:"Mercedes"    }},
+  "Vic Woods":       { 1: { p10:"Bortoleto",  dnf1:"Stroll",  constructor:"Mercedes"    }},
+  "Claire Deakin":   { 1: { p10:"Albon",      dnf1:"Stroll",  constructor:"Mercedes"    }},
+  "Brett Sprinkel":  { 1: { p10:"Lawson",     dnf1:"Stroll",  constructor:"Mercedes"    }},
+  "Joe Deakin":      { 1: { p10:"Bearman",    dnf1:"Stroll",  constructor:"Mercedes"    }},
+  "Ted Deakin":      { 1: { p10:"Bearman",    dnf1:"Stroll",  constructor:"Mercedes"    }},
+  "Jason Hoey":      { 1: { p10:"Lawson",     dnf1:"Stroll",  constructor:"Mercedes"    }},
+  "Joel Greenfield": { 1: { p10:"Lawson",     dnf1:"Gasly",   constructor:"Mercedes"    }},
+  "Andy Jurasek":    { 1: { p10:"Bearman",    dnf1:"Alonso",  constructor:"Mercedes"    }},
+  "Will Deakin":     { 1: { p10:"Verstappen", dnf1:"Stroll",  constructor:"Mercedes"    }},
+  "Jim Deakin":      { 1: { p10:"Hulkenberg", dnf1:"Stroll",  constructor:"Mercedes"    }},
+  "Rick Pflasterer": { 1: { p10:"Hulkenberg", dnf1:"Stroll",  constructor:"Mercedes"    }},
+  "Sam Levine":      { 1: { p10:"Hulkenberg", dnf1:"Stroll",  constructor:"Red Bull"    }},
 };
 
 // ─── SCORING ─────────────────────────────────────────────────────────────────
@@ -175,7 +195,6 @@ async function fbSavePicks(picks) {
   await setDoc(doc(db, "data", "picks"), picks);
 }
 async function fbSaveResults(results) {
-  // Firestore keys can't be numbers, stringify them
   const serialized = {};
   Object.entries(results).forEach(([k, v]) => { serialized[`r${k}`] = v; });
   await setDoc(doc(db, "data", "results"), serialized);
@@ -193,158 +212,195 @@ body{background:#050505;color:#f0ede8;font-family:'Barlow',sans-serif;min-height
 button{cursor:pointer;font-family:'Barlow',sans-serif}
 select,input{font-family:'Barlow',sans-serif}
 
-.app{max-width:880px;margin:0 auto;padding:0 16px 80px}
-
-/* HOME */
 .home{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px 20px;position:relative}
 .home-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(225,6,0,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(225,6,0,0.04) 1px,transparent 1px);background-size:40px 40px;pointer-events:none}
 .home-glow{position:absolute;top:30%;left:50%;transform:translate(-50%,-50%);width:600px;height:600px;background:radial-gradient(circle,rgba(225,6,0,0.08) 0%,transparent 70%);pointer-events:none}
-.home-season{font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:0.3em;color:#e10600;text-transform:uppercase;margin-bottom:16px}
-.home-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(56px,12vw,120px);line-height:0.85;color:#fff;margin-bottom:8px}
-.home-title span{color:#e10600;display:block}
-.home-sub{font-family:'Barlow Condensed',sans-serif;font-size:14px;letter-spacing:0.15em;color:#555;margin-bottom:48px}
-.home-cards{display:grid;grid-template-columns:1fr 1fr;gap:16px;width:100%;max-width:500px}
+.home-season{font-family:'Barlow Condensed',sans-serif;font-size:14px;letter-spacing:0.3em;color:#e10600;text-transform:uppercase;margin-bottom:16px}
+.home-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(52px,11vw,110px);line-height:0.85;color:#fff;margin-bottom:10px}
+.home-title .red{color:#e10600;display:block}
+.home-title .challenge{color:#fff;font-size:clamp(26px,5.5vw,56px);letter-spacing:0.1em;display:block;margin-top:6px}
+.home-sub{font-family:'Barlow Condensed',sans-serif;font-size:16px;letter-spacing:0.15em;color:#999;margin-bottom:44px}
+.home-cards{display:grid;grid-template-columns:1fr 1fr;gap:16px;width:100%;max-width:520px;margin-bottom:16px}
 @media(max-width:480px){.home-cards{grid-template-columns:1fr}}
-.home-card{background:#0d0d0d;border:1px solid #1c1c1c;border-radius:10px;padding:28px 20px;text-align:left;transition:border-color 0.2s,transform 0.15s;position:relative;overflow:hidden}
+.home-card{background:#0d0d0d;border:1px solid #1c1c1c;border-radius:10px;padding:28px 20px;text-align:left;transition:border-color 0.2s,transform 0.15s;position:relative;overflow:hidden;cursor:pointer}
 .home-card::before{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:#e10600;transform:scaleX(0);transition:transform 0.2s;transform-origin:left}
 .home-card:hover{border-color:#333;transform:translateY(-2px)}
 .home-card:hover::before{transform:scaleX(1)}
 .home-card-icon{font-size:28px;margin-bottom:12px}
-.home-card-title{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;letter-spacing:0.05em;color:#fff;margin-bottom:4px}
-.home-card-desc{font-size:12px;color:#555;line-height:1.5}
+.home-card-title{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;letter-spacing:0.05em;color:#fff;margin-bottom:6px}
+.home-card-desc{font-size:14px;color:#999;line-height:1.55}
+.home-how-btn{background:none;border:1px solid #282828;color:#bbb;border-radius:8px;padding:11px 32px;font-family:'Barlow Condensed',sans-serif;font-size:15px;letter-spacing:0.15em;text-transform:uppercase;transition:all 0.15s}
+.home-how-btn:hover{border-color:#555;color:#fff}
 
-/* MODAL */
+.directions{max-width:700px;margin:0 auto;padding:48px 20px 80px}
+.directions-back{background:none;border:none;color:#999;font-family:'Barlow Condensed',sans-serif;font-size:15px;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:28px;padding:0;display:flex;align-items:center;gap:8px;transition:color 0.15s}
+.directions-back:hover{color:#fff}
+.dir-title{font-family:'Bebas Neue',sans-serif;font-size:60px;color:#fff;line-height:1;margin-bottom:4px}
+.dir-sub{font-family:'Barlow Condensed',sans-serif;font-size:15px;color:#999;letter-spacing:0.08em;margin-bottom:36px}
+.dir-section{margin-bottom:32px}
+.dir-section-title{font-family:'Bebas Neue',sans-serif;font-size:30px;color:#e10600;margin-bottom:14px;letter-spacing:0.05em}
+.dir-card{background:#0d0d0d;border:1px solid #1a1a1a;border-radius:8px;padding:18px 20px;margin-bottom:10px}
+.dir-card-title{font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:700;color:#fff;letter-spacing:0.05em;margin-bottom:8px}
+.dir-card-body{font-size:15px;color:#bbb;line-height:1.65}
+.dir-card-body strong{color:#fff}
+.dir-pts-row{display:flex;align-items:baseline;gap:12px;padding:9px 0;border-bottom:1px solid #111}
+.dir-pts-row:last-child{border-bottom:none}
+.dir-pts-val{font-family:'Bebas Neue',sans-serif;font-size:26px;color:#e10600;width:56px;flex-shrink:0}
+.dir-pts-desc{font-size:14px;color:#bbb;line-height:1.4}
+.dir-pts-desc strong{color:#ddd}
+
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px}
 .modal{background:#0d0d0d;border:1px solid #222;border-radius:12px;padding:28px;width:100%;max-width:420px;max-height:85vh;overflow-y:auto}
-.modal-title{font-family:'Bebas Neue',sans-serif;font-size:32px;color:#fff;margin-bottom:4px}
-.modal-sub{font-size:12px;color:#555;margin-bottom:20px;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.05em}
+.modal-title{font-family:'Bebas Neue',sans-serif;font-size:34px;color:#fff;margin-bottom:4px}
+.modal-sub{font-size:14px;color:#999;margin-bottom:20px;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.05em}
 .player-list{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
-.player-btn{background:#141414;border:1px solid #222;border-radius:6px;padding:12px 14px;text-align:left;color:#ccc;font-size:13px;font-weight:500;transition:all 0.15s}
+.player-btn{background:#141414;border:1px solid #222;border-radius:6px;padding:12px 14px;text-align:left;color:#ccc;font-size:14px;font-weight:500;transition:all 0.15s}
 .player-btn:hover{background:#1a1a1a;border-color:#444;color:#fff}
 .player-btn.selected{background:rgba(225,6,0,0.1);border-color:#e10600;color:#fff}
-.modal-close{background:none;border:1px solid #222;color:#666;border-radius:6px;padding:8px 16px;font-size:12px;letter-spacing:0.1em;transition:all 0.15s;margin-top:8px;width:100%}
-.modal-close:hover{border-color:#555;color:#aaa}
-.input-field{width:100%;background:#141414;border:1px solid #222;border-radius:6px;padding:12px 14px;color:#fff;font-size:14px;margin-bottom:12px;outline:none;transition:border-color 0.15s}
+.modal-close{background:none;border:1px solid #222;color:#888;border-radius:6px;padding:10px 16px;font-size:14px;letter-spacing:0.1em;transition:all 0.15s;margin-top:8px;width:100%}
+.modal-close:hover{border-color:#555;color:#bbb}
+.input-field{width:100%;background:#141414;border:1px solid #222;border-radius:6px;padding:12px 14px;color:#fff;font-size:15px;margin-bottom:12px;outline:none;transition:border-color 0.15s}
 .input-field:focus{border-color:#e10600}
-.input-error{color:#ff4444;font-size:12px;margin-bottom:12px}
-.btn-primary{width:100%;background:#e10600;border:none;border-radius:6px;padding:13px;color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:16px;letter-spacing:0.1em;font-weight:700;transition:background 0.15s}
+.input-error{color:#ff4444;font-size:14px;margin-bottom:12px}
+.btn-primary{width:100%;background:#e10600;border:none;border-radius:6px;padding:14px;color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:17px;letter-spacing:0.1em;font-weight:700;transition:background 0.15s}
 .btn-primary:hover{background:#c00500}
 .btn-primary:disabled{background:#333;color:#666;cursor:not-allowed}
 
-/* SHELL */
 .shell{min-height:100vh}
 .topbar{background:#080808;border-bottom:1px solid #111;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
 .topbar-logo{font-family:'Bebas Neue',sans-serif;font-size:22px;color:#fff;letter-spacing:0.05em}
 .topbar-logo span{color:#e10600}
 .topbar-user{display:flex;align-items:center;gap:10px}
-.topbar-name{font-size:13px;font-weight:500;color:#aaa}
+.topbar-name{font-size:14px;font-weight:500;color:#bbb}
 .topbar-name strong{color:#fff}
-.logout-btn{background:none;border:1px solid #222;color:#555;border-radius:4px;padding:5px 12px;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;transition:all 0.15s}
-.logout-btn:hover{border-color:#444;color:#aaa}
+.logout-btn{background:none;border:1px solid #222;color:#888;border-radius:4px;padding:5px 12px;font-size:12px;letter-spacing:0.1em;text-transform:uppercase;transition:all 0.15s}
+.logout-btn:hover{border-color:#444;color:#ccc}
 .content{max-width:880px;margin:0 auto;padding:28px 16px 80px}
 
-/* TABS */
-.tabs{display:flex;gap:2px;margin-bottom:28px;border-bottom:1px solid #111;padding-bottom:0}
-.tab{background:none;border:none;padding:10px 20px;color:#444;font-family:'Barlow Condensed',sans-serif;font-size:14px;letter-spacing:0.12em;text-transform:uppercase;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color 0.15s,border-color 0.15s}
-.tab:hover{color:#888}
+.tabs{display:flex;gap:2px;margin-bottom:28px;border-bottom:1px solid #111;padding-bottom:0;overflow-x:auto}
+.tab{background:none;border:none;padding:10px 18px;color:#777;font-family:'Barlow Condensed',sans-serif;font-size:15px;letter-spacing:0.12em;text-transform:uppercase;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color 0.15s,border-color 0.15s;white-space:nowrap}
+.tab:hover{color:#bbb}
 .tab.active{color:#fff;border-bottom-color:#e10600}
 
-/* SECTION HEADER */
 .sh{display:flex;align-items:baseline;gap:12px;margin-bottom:20px}
-.sh-title{font-family:'Bebas Neue',sans-serif;font-size:36px;color:#fff}
-.sh-meta{font-family:'Barlow Condensed',sans-serif;font-size:12px;color:#444;letter-spacing:0.1em;text-transform:uppercase}
+.sh-title{font-family:'Bebas Neue',sans-serif;font-size:38px;color:#fff}
+.sh-meta{font-family:'Barlow Condensed',sans-serif;font-size:14px;color:#777;letter-spacing:0.1em;text-transform:uppercase}
 
-/* LEADERBOARD */
 .lb-header{display:grid;grid-template-columns:44px 1fr auto;padding:6px 14px;margin-bottom:4px}
-.lb-header span{font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:0.15em;color:#333;text-transform:uppercase}
+.lb-header span{font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:0.15em;color:#444;text-transform:uppercase}
 .lb-row{display:grid;grid-template-columns:44px 1fr auto;align-items:center;padding:14px 14px;border-radius:7px;margin-bottom:3px;cursor:pointer;transition:background 0.15s;border:1px solid transparent}
 .lb-row:hover{background:#0e0e0e;border-color:#1a1a1a}
 .lb-row.me{border-color:#e1060030;background:#0e0e0e}
 .lb-row.p1{background:linear-gradient(90deg,rgba(255,215,0,0.06),transparent)}
 .lb-row.p2{background:linear-gradient(90deg,rgba(192,192,192,0.05),transparent)}
 .lb-row.p3{background:linear-gradient(90deg,rgba(205,127,50,0.05),transparent)}
-.lb-rank{font-family:'Bebas Neue',sans-serif;font-size:26px;color:#222}
+.lb-rank{font-family:'Bebas Neue',sans-serif;font-size:26px;color:#333}
 .lb-row.p1 .lb-rank{color:#FFD700}
 .lb-row.p2 .lb-rank{color:#C0C0C0}
 .lb-row.p3 .lb-rank{color:#CD7F32}
-.lb-name{font-size:14px;font-weight:500;color:#ddd}
-.lb-name .you{font-size:10px;background:#e10600;color:#fff;border-radius:3px;padding:1px 6px;margin-left:6px;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.05em;vertical-align:middle}
+.lb-name{font-size:15px;font-weight:500;color:#ddd}
+.lb-name .you{font-size:11px;background:#e10600;color:#fff;border-radius:3px;padding:1px 6px;margin-left:6px;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.05em;vertical-align:middle}
 .lb-bar-wrap{height:2px;background:#161616;border-radius:1px;margin-top:5px;overflow:hidden;max-width:300px}
 .lb-bar{height:100%;background:linear-gradient(90deg,#e10600,#ff4500);border-radius:1px;transition:width 0.7s ease}
 .lb-pts-col{text-align:right}
 .lb-pts{font-family:'Bebas Neue',sans-serif;font-size:28px;color:#fff;line-height:1}
-.lb-pts-label{font-family:'Barlow Condensed',sans-serif;font-size:10px;color:#333;letter-spacing:0.1em}
+.lb-pts-label{font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#444;letter-spacing:0.1em}
 
-/* DRAWER */
 .drawer{background:#0a0a0a;border:1px solid #161616;border-radius:8px;padding:20px;margin-bottom:4px;animation:fd 0.18s ease}
 @keyframes fd{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
-.drawer-title{font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:0.2em;color:#444;text-transform:uppercase;margin-bottom:16px}
-.race-picks-row{display:grid;grid-template-columns:140px 1fr 1fr 1fr 80px;gap:8px;align-items:start;padding:10px 12px;border-radius:5px;border-bottom:1px solid #111;font-size:13px}
+.drawer-title{font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:0.2em;color:#666;text-transform:uppercase;margin-bottom:16px}
+.race-picks-row{display:grid;grid-template-columns:140px 1fr 1fr 1fr 80px;gap:8px;align-items:start;padding:10px 12px;border-radius:5px;border-bottom:1px solid #111;font-size:14px}
 @media(max-width:600px){.race-picks-row{grid-template-columns:1fr 1fr;gap:6px}}
 .race-picks-row:last-child{border-bottom:none}
 .race-picks-row:hover{background:#111}
-.rpr-race{font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:0.05em;color:#666}
-.rpr-val{color:#ccc;font-weight:500}
+.rpr-race{font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:0.05em;color:#888}
+.rpr-val{color:#ddd;font-weight:500}
 .rpr-val.correct{color:#4cff91}
 .rpr-pts{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;text-align:right}
-.rpr-pts.zero{color:#333}
-.badge{font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:0.05em;padding:2px 8px;border-radius:3px;background:#151515;color:#555;display:inline-block}
+.rpr-pts.zero{color:#444}
+.badge{font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:0.05em;padding:2px 8px;border-radius:3px;background:#151515;color:#666;display:inline-block}
 .badge.hit{background:rgba(76,255,145,0.1);color:#4cff91}
 .badge.close{background:rgba(255,165,0,0.1);color:#ffa500}
 .badge.perfect{background:rgba(225,6,0,0.15);color:#ff4444}
 
-/* PICKS */
 .pick-race-banner{background:#0d0d0d;border:1px solid #1a1a1a;border-radius:10px;padding:20px 24px;margin-bottom:24px;position:relative;overflow:hidden}
 .pick-race-banner::after{content:'';position:absolute;top:0;left:0;bottom:0;width:3px;background:#e10600}
-.prb-eyebrow{font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:0.2em;color:#e10600;text-transform:uppercase;margin-bottom:4px}
+.prb-eyebrow{font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:0.2em;color:#e10600;text-transform:uppercase;margin-bottom:4px}
 .prb-title{font-family:'Bebas Neue',sans-serif;font-size:36px;color:#fff;line-height:1;margin-bottom:2px}
-.prb-date{font-family:'Barlow Condensed',sans-serif;font-size:12px;color:#444;letter-spacing:0.1em}
+.prb-date{font-family:'Barlow Condensed',sans-serif;font-size:14px;color:#888;letter-spacing:0.1em}
 .pick-form{background:#0d0d0d;border:1px solid #1a1a1a;border-radius:10px;padding:24px}
 .form-row{margin-bottom:20px}
-.form-label{font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:0.2em;color:#555;text-transform:uppercase;margin-bottom:6px;display:block}
+.form-label{font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:0.18em;color:#999;text-transform:uppercase;margin-bottom:8px;display:block}
 .form-label span{color:#e10600;margin-left:4px}
-.form-label em{font-style:normal;color:#333;font-size:10px;margin-left:8px}
-.form-select{width:100%;background:#141414;border:1px solid #222;border-radius:6px;padding:12px 14px;color:#fff;font-size:14px;font-weight:500;outline:none;transition:border-color 0.15s;appearance:none;cursor:pointer}
+.form-label em{font-style:normal;color:#666;font-size:11px;margin-left:8px}
+.form-select{width:100%;background:#141414;border:1px solid #222;border-radius:6px;padding:12px 14px;color:#fff;font-size:15px;font-weight:500;outline:none;transition:border-color 0.15s;appearance:none;cursor:pointer}
 .form-select:focus{border-color:#e10600}
 .form-select option{background:#1a1a1a}
 .form-save-row{display:flex;align-items:center;gap:12px;margin-top:24px}
-.save-btn{background:#e10600;border:none;border-radius:6px;padding:13px 28px;color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:16px;letter-spacing:0.1em;font-weight:700;transition:background 0.15s}
+.save-btn{background:#e10600;border:none;border-radius:6px;padding:13px 28px;color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:17px;letter-spacing:0.1em;font-weight:700;transition:background 0.15s}
 .save-btn:hover{background:#c00500}
 .save-btn:disabled{background:#222;color:#555;cursor:not-allowed}
-.save-confirm{font-size:13px;color:#4cff91;animation:fd 0.3s ease}
+.save-confirm{font-size:14px;color:#4cff91;animation:fd 0.3s ease}
 
-/* RACE GRID */
+.locked-banner{background:#0d0d0d;border:1px solid #2a1800;border-radius:8px;padding:16px 20px;display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.locked-banner-text{font-family:'Barlow Condensed',sans-serif;font-size:15px;color:#cc8800;letter-spacing:0.04em;line-height:1.4}
+.locked-pick-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #111}
+.locked-pick-row:last-child{border-bottom:none}
+.locked-pick-label{font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:0.15em;color:#888;text-transform:uppercase}
+.locked-pick-value{font-size:15px;font-weight:500;color:#ddd}
+
 .race-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-bottom:24px}
 .rc{background:#0d0d0d;border:1px solid #161616;border-radius:8px;padding:16px;cursor:pointer;transition:all 0.15s;position:relative;overflow:hidden}
 .rc:hover{border-color:#2a2a2a;background:#111}
 .rc.done::before{content:'';position:absolute;top:0;left:0;bottom:0;width:2px;background:#e10600}
 .rc.active{border-color:#e10600}
-.rc.has-pick::after{content:'✓';position:absolute;top:8px;right:10px;font-size:11px;color:#4cff91}
+.rc.has-pick::after{content:'✓';position:absolute;top:8px;right:10px;font-size:12px;color:#4cff91}
 .rc-num{font-family:'Bebas Neue',sans-serif;font-size:36px;color:#161616;line-height:1}
 .rc-flag{font-size:20px;margin-bottom:4px}
-.rc-name{font-size:12px;font-weight:600;color:#ccc;margin-bottom:2px}
-.rc-date{font-family:'Barlow Condensed',sans-serif;font-size:10px;color:#333;letter-spacing:0.05em}
-.rc-done{font-family:'Barlow Condensed',sans-serif;font-size:9px;letter-spacing:0.1em;color:#e10600;text-transform:uppercase;margin-top:6px}
+.rc-name{font-size:13px;font-weight:600;color:#ccc;margin-bottom:2px}
+.rc-date{font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#666;letter-spacing:0.05em}
+.rc-done{font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:0.1em;color:#e10600;text-transform:uppercase;margin-top:6px}
+.rc-locked{font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:0.08em;color:#cc8800;text-transform:uppercase;margin-top:6px}
 
-/* RESULTS */
 .result-panel{background:#0d0d0d;border:1px solid #1a1a1a;border-radius:10px;padding:24px;animation:fd 0.18s ease}
-.rp-title{font-family:'Bebas Neue',sans-serif;font-size:40px;color:#fff;margin-bottom:20px}
+.rp-title{font-family:'Bebas Neue',sans-serif;font-size:40px;color:#fff;margin-bottom:8px}
+.rp-f1-link{display:inline-flex;align-items:center;gap:6px;font-family:'Barlow Condensed',sans-serif;font-size:13px;color:#e10600;letter-spacing:0.1em;text-decoration:none;text-transform:uppercase;margin-bottom:20px;border:1px solid #2a0600;border-radius:4px;padding:6px 14px;transition:all 0.15s}
+.rp-f1-link:hover{background:#1a0400;border-color:#e10600}
 .result-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:24px}
 @media(max-width:500px){.result-stats{grid-template-columns:1fr}}
 .rs-box{background:#141414;border:1px solid #1e1e1e;border-radius:7px;padding:14px}
-.rs-label{font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:0.2em;color:#444;text-transform:uppercase;margin-bottom:8px}
+.rs-label{font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:0.2em;color:#777;text-transform:uppercase;margin-bottom:8px}
 .rs-val{font-family:'Bebas Neue',sans-serif;font-size:30px;color:#e10600;line-height:1}
-.rs-sub{font-size:11px;color:#333;margin-top:3px;font-family:'Barlow Condensed',sans-serif}
-.results-table{width:100%;border-collapse:collapse;font-size:13px}
-.results-table th{text-align:left;font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:0.15em;color:#333;text-transform:uppercase;padding:8px 10px;border-bottom:1px solid #111}
-.results-table td{padding:10px 10px;border-bottom:1px solid #0d0d0d;color:#aaa}
+.rs-sub{font-size:13px;color:#666;margin-top:4px;font-family:'Barlow Condensed',sans-serif}
+.results-table{width:100%;border-collapse:collapse;font-size:14px}
+.results-table th{text-align:left;font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:0.15em;color:#555;text-transform:uppercase;padding:8px 10px;border-bottom:1px solid #111}
+.results-table td{padding:10px 10px;border-bottom:1px solid #0d0d0d;color:#bbb}
 .results-table tr:last-child td{border-bottom:none}
 .results-table tr:hover td{background:#0a0a0a}
 
-/* CON BADGE */
-.con{display:inline-block;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:700;letter-spacing:0.03em}
+.prerace-section-banner{background:#0d0d0d;border:1px solid #1a2a0a;border-radius:10px;padding:18px 22px;margin-bottom:22px;position:relative;overflow:hidden}
+.prerace-section-banner::after{content:'';position:absolute;top:0;left:0;bottom:0;width:3px;background:#4cff91}
+.prerace-eyebrow{font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:0.2em;color:#4cff91;text-transform:uppercase;margin-bottom:4px}
+.prerace-title{font-family:'Bebas Neue',sans-serif;font-size:34px;color:#fff;line-height:1;margin-bottom:3px}
+.prerace-sub{font-family:'Barlow Condensed',sans-serif;font-size:14px;color:#888;letter-spacing:0.06em}
+.prerace-race-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-bottom:22px}
+.prerace-rc{background:#0d0d0d;border:1px solid #161616;border-radius:8px;padding:14px;cursor:pointer;transition:all 0.15s;border-left:2px solid #e10600}
+.prerace-rc:hover{border-color:#333}
+.prerace-rc.active{border-color:#4cff91;border-left-color:#4cff91}
+.prerace-rc-name{font-size:13px;font-weight:600;color:#ccc;margin-bottom:2px}
+.prerace-rc-date{font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#666;margin-bottom:4px}
+.prerace-rc-count{font-family:'Barlow Condensed',sans-serif;font-size:12px;color:#4cff91}
+.prerace-table{width:100%;border-collapse:collapse;font-size:14px}
+.prerace-table th{text-align:left;font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:0.15em;color:#555;text-transform:uppercase;padding:8px 12px;border-bottom:1px solid #111}
+.prerace-table td{padding:11px 12px;border-bottom:1px solid #0d0d0d;color:#ccc}
+.prerace-table tr:last-child td{border-bottom:none}
+.prerace-table tr:hover td{background:#0a0a0a}
+.prerace-nopick{color:#444;font-style:italic;font-size:13px}
+.prerace-empty{text-align:center;padding:48px 0;color:#555;font-family:'Barlow Condensed',sans-serif;font-size:16px;letter-spacing:0.08em;line-height:1.6}
 
-/* ADMIN */
+.con{display:inline-block;padding:2px 8px;border-radius:3px;font-size:12px;font-weight:700;letter-spacing:0.03em}
+.you{font-size:11px;background:#e10600;color:#fff;border-radius:3px;padding:1px 6px;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.05em;vertical-align:middle}
+
 .admin-grid{display:grid;grid-template-columns:220px 1fr;gap:20px;align-items:start}
 @media(max-width:600px){.admin-grid{grid-template-columns:1fr}}
 .admin-race-list{background:#0d0d0d;border:1px solid #1a1a1a;border-radius:8px;overflow:hidden;max-height:80vh;overflow-y:auto}
@@ -352,30 +408,31 @@ select,input{font-family:'Barlow',sans-serif}
 .admin-race-item:last-child{border-bottom:none}
 .admin-race-item:hover{background:#111}
 .admin-race-item.active{background:#151515;border-left:2px solid #e10600}
-.ari-name{font-size:13px;font-weight:500;color:#ccc}
-.ari-num{font-family:'Bebas Neue',sans-serif;font-size:16px;color:#333;margin-right:8px}
+.ari-name{font-size:14px;font-weight:500;color:#ccc}
+.ari-num{font-family:'Bebas Neue',sans-serif;font-size:16px;color:#444;margin-right:8px}
 .ari-done{width:8px;height:8px;border-radius:50%;background:#e10600;flex-shrink:0}
 .admin-form{background:#0d0d0d;border:1px solid #1a1a1a;border-radius:8px;padding:24px}
-.admin-form-title{font-family:'Bebas Neue',sans-serif;font-size:32px;color:#fff;margin-bottom:4px}
-.admin-form-sub{font-size:12px;color:#444;margin-bottom:20px;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.05em}
-.admin-section-title{font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:0.2em;color:#555;text-transform:uppercase;margin:16px 0 8px}
+.admin-form-title{font-family:'Bebas Neue',sans-serif;font-size:34px;color:#fff;margin-bottom:4px}
+.admin-form-sub{font-size:13px;color:#777;margin-bottom:20px;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.05em}
+.admin-section-title{font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:0.2em;color:#777;text-transform:uppercase;margin:16px 0 8px;display:flex;align-items:center;gap:10px}
+.reset-link{font-size:11px;color:#444;cursor:pointer;text-decoration:underline;transition:color 0.15s}
+.reset-link:hover{color:#888}
 .driver-order-list{display:flex;flex-direction:column;gap:4px;margin-bottom:8px}
 .driver-order-item{display:flex;align-items:center;gap:10px;background:#141414;border:1px solid #1a1a1a;border-radius:5px;padding:8px 12px}
-.doi-pos{font-family:'Bebas Neue',sans-serif;font-size:18px;color:#333;width:32px}
+.doi-pos{font-family:'Bebas Neue',sans-serif;font-size:18px;color:#444;width:32px}
 .doi-name{font-size:13px;color:#ccc;flex:1}
-.move-btn{background:none;border:1px solid #222;color:#444;border-radius:3px;width:24px;height:24px;font-size:14px;line-height:1;transition:all 0.1s}
-.move-btn:hover{border-color:#555;color:#aaa}
-.reset-link{font-size:11px;color:#333;cursor:pointer;margin-left:8px;text-decoration:underline}
-.reset-link:hover{color:#666}
+.move-btn{background:none;border:1px solid #222;color:#555;border-radius:3px;width:24px;height:24px;font-size:14px;line-height:1;transition:all 0.1s}
+.move-btn:hover{border-color:#555;color:#ccc}
+.con-preview{background:#0a0a0a;border:1px solid #1a1a1a;border-radius:6px;padding:12px 14px;margin-bottom:6px}
+.con-preview-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid #111}
+.con-preview-row:last-child{border-bottom:none}
+.con-preview-pts{font-family:'Barlow Condensed',sans-serif;font-size:13px;color:#666}
+.con-preview-note{font-size:12px;color:#555;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.05em;margin-bottom:16px}
 .admin-save-row{display:flex;align-items:center;gap:12px;margin-top:20px}
 
-/* LOCKED MSG */
-.locked-msg{background:#0d0d0d;border:1px solid #1a1a1a;border-radius:8px;padding:20px;text-align:center;color:#444;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.05em;font-size:14px}
-
-/* LOADING */
 .loading{min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px}
-.loading-text{font-family:'Bebas Neue',sans-serif;font-size:28px;color:#222;letter-spacing:0.1em;animation:pulse 1.4s ease-in-out infinite}
-@keyframes pulse{0%,100%{color:#222}50%{color:#444}}
+.loading-text{font-family:'Bebas Neue',sans-serif;font-size:28px;color:#333;letter-spacing:0.1em;animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{color:#333}50%{color:#555}}
 `;
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
@@ -396,6 +453,93 @@ function ptsBadgeClass(pts, max=25) {
   if (pts >= max * 0.6) return "badge close";
   if (pts > 0) return "badge hit";
   return "badge";
+}
+
+// ─── DIRECTIONS ───────────────────────────────────────────────────────────────
+
+function Directions({ onBack }) {
+  return (
+    <div className="directions">
+      <button className="directions-back" onClick={onBack}>← Back to Home</button>
+      <div className="dir-title">How to Play</div>
+      <div className="dir-sub">P10 · DNF1 · CONSTRUCTORS CHALLENGE · 2026 SEASON</div>
+
+      <div className="dir-section">
+        <div className="dir-section-title">The Basics</div>
+        <div className="dir-card">
+          <div className="dir-card-body">
+            Before each race, every player submits <strong>3 picks</strong>: a P10 driver, a DNF1 driver, and a top constructor. Picks lock automatically when race day arrives and cannot be changed after that. After the race, the admin enters the results and scores update instantly for everyone.
+          </div>
+        </div>
+      </div>
+
+      <div className="dir-section">
+        <div className="dir-section-title">Scoring</div>
+        <div className="dir-card">
+          <div className="dir-card-title">Pick 1 — P10 Driver (up to 25 pts)</div>
+          <div className="dir-card-body" style={{marginTop:4,marginBottom:10}}>Pick the driver you think finishes in 10th place. Points scale based on how close you are:</div>
+          {[
+            ["25","Exactly right — your driver finishes P10"],
+            ["18","1 position away (P9 or P11)"],
+            ["15","2 positions away"],
+            ["12","3 positions away"],
+            ["10","4 positions away"],
+            ["8","5 positions away"],
+            ["6","6 positions away"],
+            ["4","7 positions away"],
+            ["2","8 positions away"],
+            ["1","9 positions away (P1 or P19)"],
+            ["0","P20 or further"],
+          ].map(([val, desc]) => (
+            <div className="dir-pts-row" key={val}>
+              <span className="dir-pts-val">{val}</span>
+              <span className="dir-pts-desc">{desc}</span>
+            </div>
+          ))}
+        </div>
+        <div className="dir-card" style={{marginTop:10}}>
+          <div className="dir-card-title">Pick 2 — DNF1 Driver (10 pts)</div>
+          <div className="dir-card-body" style={{marginTop:6}}>
+            Pick the driver who retires first. <strong>10 points</strong> if correct. The driver must have completed the formation lap to count. If no one retires, no one scores on this pick.
+          </div>
+        </div>
+        <div className="dir-card" style={{marginTop:10}}>
+          <div className="dir-card-title">Pick 3 — Top Constructor (up to 3 pts)</div>
+          <div className="dir-card-body" style={{marginTop:6}}>
+            Pick the constructor that scores the most F1 points in the race. <strong>3 pts</strong> for picking P1, <strong>2 pts</strong> for P2, <strong>1 pt</strong> for P3. Tied constructors are separated by which team has the higher-finishing driver.
+          </div>
+        </div>
+        <div className="dir-card" style={{marginTop:10}}>
+          <div className="dir-card-title">Maximum: 38 pts per race · 912 pts for the season</div>
+          <div className="dir-card-body" style={{marginTop:6}}>
+            25 (P10) + 10 (DNF1) + 3 (Constructor) = <strong>38 pts</strong> maximum per race across <strong>24 races</strong>.
+          </div>
+        </div>
+      </div>
+
+      <div className="dir-section">
+        <div className="dir-section-title">Using the App</div>
+        <div className="dir-card">
+          <div className="dir-card-title">Submitting Picks</div>
+          <div className="dir-card-body" style={{marginTop:6}}>
+            Tap <strong>I'm a Player</strong>, choose your name, then go to <strong>My Picks</strong>. Select a race, fill in all three picks, and hit Submit. You can update picks any time before the race starts — once the race date arrives they lock permanently.
+          </div>
+        </div>
+        <div className="dir-card" style={{marginTop:10}}>
+          <div className="dir-card-title">Pre-Race Picks</div>
+          <div className="dir-card-body" style={{marginTop:6}}>
+            Once a race locks, the <strong>Pre-Race</strong> tab reveals everyone's picks. See who picked what before the action unfolds.
+          </div>
+        </div>
+        <div className="dir-card" style={{marginTop:10}}>
+          <div className="dir-card-title">Standings and Results</div>
+          <div className="dir-card-body" style={{marginTop:6}}>
+            <strong>Standings</strong> shows the live season leaderboard — tap any player for a race-by-race breakdown. <strong>Results</strong> shows full picks and scores for every completed race, plus a link to the official F1 results.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // ─── LEADERBOARD ─────────────────────────────────────────────────────────────
@@ -426,7 +570,7 @@ function Leaderboard({ standings, allResults, currentPlayer }) {
               <div>
                 <div className="lb-name">
                   {entry.player}
-                  {isMe && <span className="you">YOU</span>}
+                  {isMe && <span className="you" style={{marginLeft:6}}>YOU</span>}
                 </div>
                 <div className="lb-bar-wrap">
                   <div className="lb-bar" style={{ width: `${(entry.total / max) * 100}%` }} />
@@ -440,7 +584,7 @@ function Leaderboard({ standings, allResults, currentPlayer }) {
             {isOpen && (
               <div className="drawer">
                 <div className="drawer-title">{entry.player} · Race Breakdown</div>
-                <div className="race-picks-row" style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:"10px",letterSpacing:"0.15em",color:"#333",textTransform:"uppercase",paddingBottom:6}}>
+                <div className="race-picks-row" style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:"11px",letterSpacing:"0.15em",color:"#444",textTransform:"uppercase",paddingBottom:6}}>
                   <span>Race</span><span>P10 Pick</span><span>DNF1</span><span>Constructor</span><span style={{textAlign:"right"}}>Pts</span>
                 </div>
                 {completedRaces.map(raceId => {
@@ -448,9 +592,9 @@ function Leaderboard({ standings, allResults, currentPlayer }) {
                   const res = allResults[raceId];
                   const race = RACES.find(r => r.id === raceId);
                   if (!d) return (
-                    <div className="race-picks-row" key={raceId} style={{opacity:0.35}}>
+                    <div className="race-picks-row" key={raceId} style={{opacity:0.4}}>
                       <span className="rpr-race">{race?.flag} {race?.name}</span>
-                      <span style={{color:"#333",fontSize:12,gridColumn:"2/6"}}>No pick submitted</span>
+                      <span style={{color:"#444",fontSize:13,gridColumn:"2/6"}}>No pick submitted</span>
                     </div>
                   );
                   const p10pos = res.finishing_order.indexOf(d.p10) + 1;
@@ -460,7 +604,7 @@ function Leaderboard({ standings, allResults, currentPlayer }) {
                       <span>
                         <span className={`rpr-val ${d.p10pts>0?"correct":""}`}>{d.p10}</span>
                         <span className={ptsBadgeClass(d.p10pts)} style={{marginLeft:6}}>{d.p10pts}pt</span>
-                        <div style={{fontSize:10,color:"#444",fontFamily:"'Barlow Condensed',sans-serif",marginTop:2}}>Finished P{p10pos}</div>
+                        <div style={{fontSize:11,color:"#666",fontFamily:"'Barlow Condensed',sans-serif",marginTop:2}}>Finished P{p10pos}</div>
                       </span>
                       <span>
                         <span className={`rpr-val ${d.dnfpts>0?"correct":""}`}>{d.dnf1}</span>
@@ -475,7 +619,7 @@ function Leaderboard({ standings, allResults, currentPlayer }) {
                   );
                 })}
                 {completedRaces.length === 0 && (
-                  <div style={{color:"#444",padding:"10px 0",fontSize:13}}>No races completed yet.</div>
+                  <div style={{color:"#666",padding:"10px 0",fontSize:14}}>No races completed yet.</div>
                 )}
               </div>
             )}
@@ -512,6 +656,7 @@ function MyPicks({ player, allPicks, allResults, onSave }) {
 
   const editableRace = editRace ? RACES.find(r => r.id === editRace) : null;
   const raceIsLocked = editableRace ? isRaceLocked(editableRace) : false;
+  const existingPick = editRace ? playerPicks[editRace] : null;
 
   return (
     <div>
@@ -532,10 +677,11 @@ function MyPicks({ player, allPicks, allResults, onSave }) {
         {RACES.map(r => {
           const hasResult = !!allResults[r.id];
           const hasPick = !!playerPicks[r.id];
+          const locked = isRaceLocked(r);
           return (
             <div
               key={r.id}
-              className={`rc ${hasResult?"done":""} ${editRace===r.id?"active":""} ${hasPick&&!hasResult?"has-pick":""}`}
+              className={`rc ${hasResult?"done":""} ${editRace===r.id?"active":""} ${hasPick&&!locked?"has-pick":""}`}
               onClick={() => setEditRace(r.id)}
             >
               <div className="rc-num">{String(r.id).padStart(2,"0")}</div>
@@ -543,6 +689,7 @@ function MyPicks({ player, allPicks, allResults, onSave }) {
               <div className="rc-name">{r.name}</div>
               <div className="rc-date">{r.date}</div>
               {hasResult && <div className="rc-done">Results in</div>}
+              {locked && !hasResult && <div className="rc-locked">🔒 Locked</div>}
             </div>
           );
         })}
@@ -551,35 +698,42 @@ function MyPicks({ player, allPicks, allResults, onSave }) {
       {editableRace && (
         <div style={{animation:"fd 0.2s ease"}}>
           {raceIsLocked ? (
-            playerPicks[editRace] ? (
-              <div className="pick-form">
-                <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,letterSpacing:"0.2em",color:"#555",textTransform:"uppercase",marginBottom:16}}>
-                  {editableRace.flag} {editableRace.name} · Your Picks (Locked)
-                </div>
-                {["p10","dnf1","constructor"].map(key => (
-                  <div key={key} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:"1px solid #111"}}>
-                    <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,letterSpacing:"0.15em",color:"#444",textTransform:"uppercase"}}>
-                      {key==="p10"?"P10 Driver":key==="dnf1"?"DNF1 Driver":"Constructor"}
-                    </span>
-                    <span style={{fontWeight:500,color:"#ddd"}}>{playerPicks[editRace][key]}</span>
-                  </div>
-                ))}
-                <div style={{marginTop:12,fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,color:"#333",letterSpacing:"0.08em"}}>
-                  🔒 Picks locked — race has started
-                </div>
+            <div className="pick-form">
+              <div className="locked-banner">
+                <span style={{fontSize:20}}>🔒</span>
+                <span className="locked-banner-text">
+                  {existingPick
+                    ? `${editableRace.name} has started — picks are locked and cannot be changed.`
+                    : `${editableRace.name} has started — picks are closed. No pick was submitted for this race.`
+                  }
+                </span>
               </div>
-            ) : (
-              <div className="locked-msg">🔒 {editableRace.flag} {editableRace.name} — picks closed, no pick was submitted</div>
-            )
+              {existingPick && (
+                <>
+                  <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:12,letterSpacing:"0.18em",color:"#777",textTransform:"uppercase",marginBottom:14}}>
+                    {editableRace.flag} {editableRace.name} · Your Submitted Picks
+                  </div>
+                  {[
+                    {label:"P10 Driver",   val: existingPick.p10},
+                    {label:"DNF1 Driver",  val: existingPick.dnf1},
+                    {label:"Constructor",  val: existingPick.constructor},
+                  ].map(item => (
+                    <div className="locked-pick-row" key={item.label}>
+                      <span className="locked-pick-label">{item.label}</span>
+                      <span className="locked-pick-value">{item.val}</span>
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
           ) : (
             <div className="pick-form">
-              <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,letterSpacing:"0.2em",color:"#e10600",textTransform:"uppercase",marginBottom:4}}>
+              <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:12,letterSpacing:"0.2em",color:"#e10600",textTransform:"uppercase",marginBottom:4}}>
                 Submit Picks
               </div>
-              <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:28,color:"#fff",marginBottom:20}}>
+              <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"30px",color:"#fff",marginBottom:20}}>
                 {editableRace.flag} {editableRace.name} Grand Prix · R{editableRace.id}
               </div>
-
               <div className="form-row">
                 <label className="form-label">P10 Driver <span>*</span> <em>Pick the driver you think finishes 10th</em></label>
                 <select className="form-select" value={form.p10} onChange={e => setForm(f => ({...f, p10: e.target.value}))}>
@@ -587,7 +741,6 @@ function MyPicks({ player, allPicks, allResults, onSave }) {
                   {DRIVERS.map(d => <option key={d} value={d}>{d}</option>)}
                 </select>
               </div>
-
               <div className="form-row">
                 <label className="form-label">DNF1 Driver <span>*</span> <em>First retirement of the race</em></label>
                 <select className="form-select" value={form.dnf1} onChange={e => setForm(f => ({...f, dnf1: e.target.value}))}>
@@ -595,7 +748,6 @@ function MyPicks({ player, allPicks, allResults, onSave }) {
                   {DRIVERS.map(d => <option key={d} value={d}>{d}</option>)}
                 </select>
               </div>
-
               <div className="form-row">
                 <label className="form-label">Top Constructor <span>*</span> <em>Team that scores the most points</em></label>
                 <select className="form-select" value={form.constructor} onChange={e => setForm(f => ({...f, constructor: e.target.value}))}>
@@ -603,14 +755,9 @@ function MyPicks({ player, allPicks, allResults, onSave }) {
                   {CONSTRUCTORS.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
-
               <div className="form-save-row">
-                <button
-                  className="save-btn"
-                  onClick={handleSave}
-                  disabled={!form.p10 || !form.dnf1 || !form.constructor}
-                >
-                  {playerPicks[editRace] ? "Update Picks" : "Submit Picks"}
+                <button className="save-btn" onClick={handleSave} disabled={!form.p10 || !form.dnf1 || !form.constructor}>
+                  {existingPick ? "Update Picks" : "Submit Picks"}
                 </button>
                 {saved && <span className="save-confirm">✓ Picks saved!</span>}
               </div>
@@ -622,11 +769,108 @@ function MyPicks({ player, allPicks, allResults, onSave }) {
   );
 }
 
+// ─── PRE-RACE PICKS ───────────────────────────────────────────────────────────
+
+function PreRacePicks({ allPicks, allResults, currentPlayer }) {
+  const lockedRaces = RACES.filter(r => isRaceLocked(r));
+  const defaultRace = lockedRaces[lockedRaces.length - 1];
+  const [selectedRace, setSelectedRace] = useState(defaultRace?.id || 1);
+  const race = RACES.find(r => r.id === selectedRace);
+  const hasResult = !!allResults[selectedRace];
+
+  if (lockedRaces.length === 0) {
+    return (
+      <div>
+        <div className="sh"><span className="sh-title">Pre-Race Picks</span></div>
+        <div className="prerace-empty">
+          No races have started yet.<br/>
+          Check back once the first race weekend arrives.
+        </div>
+      </div>
+    );
+  }
+
+  const submittedCount = PLAYERS.filter(p => allPicks[p]?.[selectedRace]).length;
+
+  return (
+    <div>
+      <div className="sh">
+        <span className="sh-title">Pre-Race Picks</span>
+        <span className="sh-meta">Everyone's picks · locked races</span>
+      </div>
+
+      <div className="prerace-race-grid">
+        {lockedRaces.map(r => {
+          const count = PLAYERS.filter(p => allPicks[p]?.[r.id]).length;
+          return (
+            <div
+              key={r.id}
+              className={`prerace-rc ${selectedRace===r.id?"active":""}`}
+              onClick={() => setSelectedRace(r.id)}
+            >
+              <div className="prerace-rc-name">{r.flag} {r.name}</div>
+              <div className="prerace-rc-date">{r.date}</div>
+              <div className="prerace-rc-count">{count}/{PLAYERS.length} submitted</div>
+            </div>
+          );
+        })}
+      </div>
+
+      {race && (
+        <>
+          <div className="prerace-section-banner">
+            <div className="prerace-eyebrow">
+              {hasResult ? "Completed Race" : "Race Locked — Picks Revealed"}
+            </div>
+            <div className="prerace-title">{race.flag} {race.name} Grand Prix · R{race.id}</div>
+            <div className="prerace-sub">{submittedCount} of {PLAYERS.length} players submitted picks</div>
+          </div>
+
+          <table className="prerace-table">
+            <thead>
+              <tr>
+                <th>Player</th>
+                <th>P10 Pick</th>
+                <th>DNF1</th>
+                <th>Constructor</th>
+              </tr>
+            </thead>
+            <tbody>
+              {PLAYERS.map(player => {
+                const pick = allPicks[player]?.[selectedRace];
+                const isMe = player === currentPlayer;
+                return (
+                  <tr key={player} style={isMe ? {background:"rgba(225,6,0,0.04)"} : {}}>
+                    <td style={{color:isMe?"#fff":"#ccc",fontWeight:isMe?600:400}}>
+                      {player}
+                      {isMe && <span className="you" style={{marginLeft:6}}>YOU</span>}
+                    </td>
+                    {pick ? (
+                      <>
+                        <td>{pick.p10}</td>
+                        <td>{pick.dnf1}</td>
+                        <td><ConBadge team={pick.constructor}/></td>
+                      </>
+                    ) : (
+                      <td colSpan={3} className="prerace-nopick">No pick submitted</td>
+                    )}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ─── RACE RESULTS VIEW ───────────────────────────────────────────────────────
 
 function RaceResultsView({ allPicks, allResults, currentPlayer, standings }) {
+  const completedRaceIds = Object.keys(allResults).map(Number);
   const [selectedRace, setSelectedRace] = useState(
-    Object.keys(allResults).length > 0 ? Math.max(...Object.keys(allResults).map(Number)) : 1
+    completedRaceIds.length > 0 ? Math.max(...completedRaceIds) : 1
   );
   const race = RACES.find(r => r.id === selectedRace);
   const result = allResults[selectedRace];
@@ -634,7 +878,7 @@ function RaceResultsView({ allPicks, allResults, currentPlayer, standings }) {
   return (
     <div>
       <div className="sh">
-        <span className="sh-title">Race Results</span>
+        <span className="sh-title">Results</span>
         <span className="sh-meta">Select a completed race</span>
       </div>
       <div className="race-grid">
@@ -656,6 +900,11 @@ function RaceResultsView({ allPicks, allResults, currentPlayer, standings }) {
       {race && (
         <div className="result-panel">
           <div className="rp-title">{race.flag} {race.name} Grand Prix</div>
+          {result && (
+            <a href={RACE_RESULTS_LINKS[race.id]} target="_blank" rel="noopener noreferrer" className="rp-f1-link">
+              🏁 Official F1 Race Results ↗
+            </a>
+          )}
           {result ? (
             <>
               <div className="result-stats">
@@ -675,18 +924,13 @@ function RaceResultsView({ allPicks, allResults, currentPlayer, standings }) {
                   <div className="rs-sub" style={{marginTop:6}}>3pts if picked correctly</div>
                 </div>
               </div>
-
-              <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:10,letterSpacing:"0.2em",color:"#333",textTransform:"uppercase",marginBottom:10}}>
+              <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,letterSpacing:"0.2em",color:"#555",textTransform:"uppercase",marginBottom:10}}>
                 All Picks This Race
               </div>
               <table className="results-table">
                 <thead>
                   <tr>
-                    <th>#</th>
-                    <th>Player</th>
-                    <th>P10 Pick</th>
-                    <th>DNF1</th>
-                    <th>Constructor</th>
+                    <th>#</th><th>Player</th><th>P10 Pick</th><th>DNF1</th><th>Constructor</th>
                     <th style={{textAlign:"right"}}>Pts</th>
                   </tr>
                 </thead>
@@ -700,22 +944,21 @@ function RaceResultsView({ allPicks, allResults, currentPlayer, standings }) {
                       const isMe = s.player === currentPlayer;
                       return (
                         <tr key={s.player} style={isMe ? {background:"rgba(225,6,0,0.04)"} : {}}>
-                          <td style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:18,color:"#333"}}>{i+1}</td>
-                          <td style={{color:isMe?"#fff":"#aaa",fontWeight:isMe?600:400}}>
-                            {s.player}
-                            {isMe && <span className="you" style={{marginLeft:6}}>YOU</span>}
+                          <td style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:18,color:"#444"}}>{i+1}</td>
+                          <td style={{color:isMe?"#fff":"#bbb",fontWeight:isMe?600:400}}>
+                            {s.player}{isMe && <span className="you" style={{marginLeft:6}}>YOU</span>}
                           </td>
                           <td>
-                            <span style={{color:d.p10pts>0?"#4cff91":"#aaa"}}>{d.p10}</span>
+                            <span style={{color:d.p10pts>0?"#4cff91":"#bbb"}}>{d.p10}</span>
                             <span className={ptsBadgeClass(d.p10pts)} style={{marginLeft:6}}>{d.p10pts}pt</span>
-                            <div style={{fontSize:10,color:"#333",fontFamily:"'Barlow Condensed',sans-serif"}}>P{pos}</div>
+                            <div style={{fontSize:11,color:"#666",fontFamily:"'Barlow Condensed',sans-serif"}}>P{pos}</div>
                           </td>
                           <td>
-                            <span style={{color:d.dnfpts>0?"#4cff91":"#aaa"}}>{d.dnf1}</span>
+                            <span style={{color:d.dnfpts>0?"#4cff91":"#bbb"}}>{d.dnf1}</span>
                             {d.dnfpts > 0 && <span className="badge hit" style={{marginLeft:6}}>+10</span>}
                           </td>
                           <td>
-                            <ConBadge team={d.constructor} />
+                            <ConBadge team={d.constructor}/>
                             {d.conpts > 0 && <span className="badge hit" style={{marginLeft:4}}>+{d.conpts}</span>}
                           </td>
                           <td style={{textAlign:"right",fontFamily:"'Bebas Neue',sans-serif",fontSize:22,color:"#fff"}}>{d.total}</td>
@@ -726,7 +969,7 @@ function RaceResultsView({ allPicks, allResults, currentPlayer, standings }) {
               </table>
             </>
           ) : (
-            <div style={{color:"#333",padding:"40px 0",textAlign:"center",fontFamily:"'Barlow Condensed',sans-serif",fontSize:14,letterSpacing:"0.1em"}}>
+            <div style={{color:"#666",padding:"40px 0",textAlign:"center",fontFamily:"'Barlow Condensed',sans-serif",fontSize:15,letterSpacing:"0.1em"}}>
               No results entered yet for {race.name}.
             </div>
           )}
@@ -744,7 +987,6 @@ function AdminPanel({ allResults, onSaveResults }) {
   const [dnf1, setDnf1] = useState("");
   const [saved, setSaved] = useState(false);
 
-  // Auto-calculate constructor order live as driver order changes
   const conOrder = calcConstructorOrder(order);
 
   useEffect(() => {
@@ -768,18 +1010,12 @@ function AdminPanel({ allResults, onSaveResults }) {
   };
 
   const handleSave = () => {
-    onSaveResults(selectedRace, {
-      finishing_order: order,
-      dnf1,
-      constructor_order: conOrder,
-    });
+    onSaveResults(selectedRace, { finishing_order: order, dnf1, constructor_order: conOrder });
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   };
 
   const race = RACES.find(r => r.id === selectedRace);
-
-  // Build a pts-per-team preview for display
   const teamPts = {};
   CONSTRUCTORS.forEach(c => { teamPts[c] = 0; });
   order.forEach((driver, i) => {
@@ -796,11 +1032,7 @@ function AdminPanel({ allResults, onSaveResults }) {
       <div className="admin-grid">
         <div className="admin-race-list">
           {RACES.map(r => (
-            <div
-              key={r.id}
-              className={`admin-race-item ${selectedRace===r.id?"active":""}`}
-              onClick={() => setSelectedRace(r.id)}
-            >
+            <div key={r.id} className={`admin-race-item ${selectedRace===r.id?"active":""}`} onClick={() => setSelectedRace(r.id)}>
               <div style={{display:"flex",alignItems:"center"}}>
                 <span className="ari-num">{r.id}</span>
                 <span className="ari-name">{r.flag} {r.name}</span>
@@ -809,7 +1041,6 @@ function AdminPanel({ allResults, onSaveResults }) {
             </div>
           ))}
         </div>
-
         <div className="admin-form">
           <div className="admin-form-title">{race?.flag} {race?.name}</div>
           <div className="admin-form-sub">Round {race?.id} · {race?.date} — set driver order, constructor ranking auto-calculates</div>
@@ -824,9 +1055,7 @@ function AdminPanel({ allResults, onSaveResults }) {
                 <span className="doi-pos">{i + 1}</span>
                 <span className="doi-name">
                   {driver}
-                  <span style={{fontSize:10,color:"#444",marginLeft:8,fontFamily:"'Barlow Condensed',sans-serif"}}>
-                    {DRIVER_CONSTRUCTOR[driver]}
-                  </span>
+                  <span style={{fontSize:11,color:"#555",marginLeft:8,fontFamily:"'Barlow Condensed',sans-serif"}}>{DRIVER_CONSTRUCTOR[driver]}</span>
                 </span>
                 <button className="move-btn" onClick={() => moveDriver(i, -1)}>↑</button>
                 <button className="move-btn" onClick={() => moveDriver(i, 1)}>↓</button>
@@ -840,25 +1069,19 @@ function AdminPanel({ allResults, onSaveResults }) {
             {DRIVERS.map(d => <option key={d} value={d}>{d}</option>)}
           </select>
 
-          <div className="admin-section-title">
-            Constructor Order — Auto-calculated ✓
-          </div>
-          <div style={{background:"#0a0a0a",border:"1px solid #1a1a1a",borderRadius:6,padding:"12px 14px",marginBottom:8}}>
+          <div className="admin-section-title">Constructor Order — Auto-calculated ✓</div>
+          <div className="con-preview">
             {conOrder.map((team, i) => (
-              <div key={team} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"6px 0",borderBottom:i<conOrder.length-1?"1px solid #111":"none"}}>
+              <div key={team} className="con-preview-row">
                 <div style={{display:"flex",alignItems:"center",gap:10}}>
-                  <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:16,color:"#333",width:24}}>{i+1}</span>
+                  <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:16,color:"#444",width:24}}>{i+1}</span>
                   <ConBadge team={team}/>
                 </div>
-                <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:12,color:"#555"}}>
-                  {teamPts[team]}pts
-                </span>
+                <span className="con-preview-pts">{teamPts[team]}pts</span>
               </div>
             ))}
           </div>
-          <div style={{fontSize:11,color:"#333",fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:"0.05em",marginBottom:16}}>
-            Ranked by F1 constructor points · ties broken by highest finishing driver
-          </div>
+          <div className="con-preview-note">Ranked by F1 constructor points · ties broken by highest finishing driver</div>
 
           <div className="admin-save-row">
             <button className="save-btn" onClick={handleSave}>Save Results</button>
@@ -872,7 +1095,7 @@ function AdminPanel({ allResults, onSaveResults }) {
 
 // ─── HOME ─────────────────────────────────────────────────────────────────────
 
-function Home({ onPlayer, onAdmin }) {
+function Home({ onPlayer, onAdmin, onDirections }) {
   const [showPlayerModal, setShowPlayerModal] = useState(false);
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
@@ -890,7 +1113,11 @@ function Home({ onPlayer, onAdmin }) {
       <div className="home-grid" />
       <div className="home-glow" />
       <div className="home-season">2026 Formula One Season</div>
-      <div className="home-title">P10 · DNF1<span>Constructors</span></div>
+      <div className="home-title">
+        P10 · DNF1
+        <span className="red">Constructors</span>
+        <span className="challenge">Challenge</span>
+      </div>
       <div className="home-sub">15 Players · 24 Races · 3 Picks Per Race</div>
       <div className="home-cards">
         <div className="home-card" onClick={() => setShowPlayerModal(true)}>
@@ -904,24 +1131,19 @@ function Home({ onPlayer, onAdmin }) {
           <div className="home-card-desc">Enter race results after each Grand Prix to update everyone's scores.</div>
         </div>
       </div>
+      <button className="home-how-btn" onClick={onDirections}>📋 How to Play</button>
 
       {showPlayerModal && (
         <div className="modal-bg" onClick={() => setShowPlayerModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-title">Who Are You?</div>
-            <div className="modal-sub">SELECT YOUR NAME FROM THE LIST</div>
+            <div className="modal-sub">Select your name from the list</div>
             <div className="player-list">
               {PLAYERS.map(p => (
-                <button
-                  key={p}
-                  className={`player-btn ${selectedPlayer === p ? "selected" : ""}`}
-                  onClick={() => setSelectedPlayer(p)}
-                >{p}</button>
+                <button key={p} className={`player-btn ${selectedPlayer===p?"selected":""}`} onClick={() => setSelectedPlayer(p)}>{p}</button>
               ))}
             </div>
-            <button className="btn-primary" onClick={handlePlayerGo} disabled={!selectedPlayer}>
-              Enter as {selectedPlayer || "..."}
-            </button>
+            <button className="btn-primary" onClick={handlePlayerGo} disabled={!selectedPlayer}>Enter as {selectedPlayer || "..."}</button>
             <button className="modal-close" onClick={() => setShowPlayerModal(false)}>Cancel</button>
           </div>
         </div>
@@ -931,16 +1153,10 @@ function Home({ onPlayer, onAdmin }) {
         <div className="modal-bg" onClick={() => setShowAdminModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-title">Admin Login</div>
-            <div className="modal-sub">ENTER THE ADMIN PASSWORD</div>
-            <input
-              type="password"
-              className="input-field"
-              placeholder="Password"
-              value={adminPw}
+            <div className="modal-sub">Enter the admin password</div>
+            <input type="password" className="input-field" placeholder="Password" value={adminPw}
               onChange={e => { setAdminPw(e.target.value); setAdminErr(false); }}
-              onKeyDown={e => e.key === "Enter" && handleAdminGo()}
-              autoFocus
-            />
+              onKeyDown={e => e.key === "Enter" && handleAdminGo()} autoFocus />
             {adminErr && <div className="input-error">Incorrect password.</div>}
             <button className="btn-primary" onClick={handleAdminGo}>Enter Admin</button>
             <button className="modal-close" onClick={() => setShowAdminModal(false)}>Cancel</button>
@@ -961,44 +1177,30 @@ export default function App() {
   const [playerTab, setPlayerTab] = useState("picks");
   const [loading, setLoading] = useState(true);
 
-  // Real-time Firestore listeners
   useEffect(() => {
     let picksLoaded = false;
     let resultsLoaded = false;
-
-    const checkDone = () => {
-      if (picksLoaded && resultsLoaded) setLoading(false);
-    };
-
+    const checkDone = () => { if (picksLoaded && resultsLoaded) setLoading(false); };
     const unsubPicks = onSnapshot(doc(db, "data", "picks"), snap => {
       if (snap.exists()) setAllPicks(snap.data());
-      else fbSavePicks(SEED_PICKS); // seed on first run
-      picksLoaded = true;
-      checkDone();
+      else fbSavePicks(SEED_PICKS);
+      picksLoaded = true; checkDone();
     });
-
     const unsubResults = onSnapshot(doc(db, "data", "results"), snap => {
       if (snap.exists()) {
-        // Convert r1, r2... keys back to numbers
         const raw = snap.data();
         const parsed = {};
-        Object.entries(raw).forEach(([k, v]) => {
-          parsed[Number(k.replace("r", ""))] = v;
-        });
+        Object.entries(raw).forEach(([k, v]) => { parsed[Number(k.replace("r",""))] = v; });
         setAllResults(parsed);
-      } else {
-        fbSaveResults(SEED_RESULTS); // seed on first run
-      }
-      resultsLoaded = true;
-      checkDone();
+      } else { fbSaveResults(SEED_RESULTS); }
+      resultsLoaded = true; checkDone();
     });
-
     return () => { unsubPicks(); unsubResults(); };
   }, []);
 
   const handleSavePick = useCallback((player, raceId, pick) => {
     setAllPicks(prev => {
-      const updated = { ...prev, [player]: { ...(prev[player] || {}), [raceId]: pick } };
+      const updated = { ...prev, [player]: { ...(prev[player]||{}), [raceId]: pick } };
       fbSavePicks(updated);
       return updated;
     });
@@ -1014,59 +1216,55 @@ export default function App() {
 
   const standings = computeStandings(allPicks, allResults);
 
-  if (loading) {
-    return (
-      <>
-        <style>{CSS}</style>
-        <div className="loading">
-          <div style={{fontSize:48}}>🏎️</div>
-          <div className="loading-text">LOADING SEASON DATA...</div>
-        </div>
-      </>
-    );
-  }
+  if (loading) return (
+    <><style>{CSS}</style>
+      <div className="loading">
+        <div style={{fontSize:48}}>🏎️</div>
+        <div className="loading-text">LOADING SEASON DATA...</div>
+      </div>
+    </>
+  );
 
-  if (screen === "home") {
-    return (
-      <>
-        <style>{CSS}</style>
-        <Home
-          onPlayer={name => { setCurrentPlayer(name); setScreen("player"); setPlayerTab("picks"); }}
-          onAdmin={() => setScreen("admin")}
-        />
-      </>
-    );
-  }
+  if (screen === "directions") return (
+    <><style>{CSS}</style><Directions onBack={() => setScreen("home")} /></>
+  );
 
-  if (screen === "admin") {
-    return (
-      <>
-        <style>{CSS}</style>
-        <div className="shell">
-          <div className="topbar">
-            <div className="topbar-logo">P10 · DNF1 · <span>CON</span></div>
-            <div className="topbar-user">
-              <span className="topbar-name">Admin Mode</span>
-              <button className="logout-btn" onClick={() => setScreen("home")}>← Exit</button>
-            </div>
-          </div>
-          <div className="content">
-            <AdminPanel allResults={allResults} onSaveResults={handleSaveResults} />
+  if (screen === "home") return (
+    <><style>{CSS}</style>
+      <Home
+        onPlayer={name => { setCurrentPlayer(name); setScreen("player"); setPlayerTab("picks"); }}
+        onAdmin={() => setScreen("admin")}
+        onDirections={() => setScreen("directions")}
+      />
+    </>
+  );
+
+  if (screen === "admin") return (
+    <><style>{CSS}</style>
+      <div className="shell">
+        <div className="topbar">
+          <div className="topbar-logo">P10 · DNF1 · <span>CON</span></div>
+          <div className="topbar-user">
+            <span className="topbar-name">Admin Mode</span>
+            <button className="logout-btn" onClick={() => setScreen("home")}>← Exit</button>
           </div>
         </div>
-      </>
-    );
-  }
+        <div className="content">
+          <AdminPanel allResults={allResults} onSaveResults={handleSaveResults} />
+        </div>
+      </div>
+    </>
+  );
 
   const tabs = [
-    { id: "picks",     label: "My Picks"  },
-    { id: "standings", label: "Standings" },
-    { id: "results",   label: "Results"   },
+    { id:"picks",     label:"My Picks"  },
+    { id:"prerace",   label:"Pre-Race"  },
+    { id:"standings", label:"Standings" },
+    { id:"results",   label:"Results"   },
   ];
 
   return (
-    <>
-      <style>{CSS}</style>
+    <><style>{CSS}</style>
       <div className="shell">
         <div className="topbar">
           <div className="topbar-logo">P10 · DNF1 · <span>CON</span></div>
@@ -1078,14 +1276,13 @@ export default function App() {
         <div className="content">
           <nav className="tabs">
             {tabs.map(t => (
-              <button key={t.id} className={`tab ${playerTab===t.id?"active":""}`} onClick={() => setPlayerTab(t.id)}>
-                {t.label}
-              </button>
+              <button key={t.id} className={`tab ${playerTab===t.id?"active":""}`} onClick={() => setPlayerTab(t.id)}>{t.label}</button>
             ))}
           </nav>
-          {playerTab === "standings" && <Leaderboard standings={standings} allResults={allResults} currentPlayer={currentPlayer} />}
-          {playerTab === "picks"     && <MyPicks player={currentPlayer} allPicks={allPicks} allResults={allResults} onSave={handleSavePick} />}
-          {playerTab === "results"   && <RaceResultsView allPicks={allPicks} allResults={allResults} currentPlayer={currentPlayer} standings={standings} />}
+          {playerTab==="picks"     && <MyPicks player={currentPlayer} allPicks={allPicks} allResults={allResults} onSave={handleSavePick}/>}
+          {playerTab==="prerace"   && <PreRacePicks allPicks={allPicks} allResults={allResults} currentPlayer={currentPlayer}/>}
+          {playerTab==="standings" && <Leaderboard standings={standings} allResults={allResults} currentPlayer={currentPlayer}/>}
+          {playerTab==="results"   && <RaceResultsView allPicks={allPicks} allResults={allResults} currentPlayer={currentPlayer} standings={standings}/>}
         </div>
       </div>
     </>
