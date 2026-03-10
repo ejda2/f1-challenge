@@ -772,19 +772,26 @@ function MyPicks({ player, allPicks, allResults, onSave }) {
 // ─── PRE-RACE PICKS ───────────────────────────────────────────────────────────
 
 function PreRacePicks({ allPicks, allResults, currentPlayer }) {
-  const lockedRaces = RACES.filter(r => isRaceLocked(r));
-  const defaultRace = lockedRaces[lockedRaces.length - 1];
+  // Show all races that have at least one pick submitted, or are the next upcoming race
+  const nextRace = getNextRace();
+  const visibleRaces = RACES.filter(r => {
+    const hasAnyPick = PLAYERS.some(p => allPicks[p]?.[r.id]);
+    return hasAnyPick || r.id === nextRace?.id;
+  });
+
+  const defaultRace = nextRace || visibleRaces[visibleRaces.length - 1];
   const [selectedRace, setSelectedRace] = useState(defaultRace?.id || 1);
   const race = RACES.find(r => r.id === selectedRace);
   const hasResult = !!allResults[selectedRace];
+  const locked = race ? isRaceLocked(race) : false;
 
-  if (lockedRaces.length === 0) {
+  if (visibleRaces.length === 0) {
     return (
       <div>
         <div className="sh"><span className="sh-title">Pre-Race Picks</span></div>
         <div className="prerace-empty">
-          No races have started yet.<br/>
-          Check back once the first race weekend arrives.
+          No picks have been submitted yet.<br/>
+          Be the first to submit your picks for {nextRace?.name || "the next race"}!
         </div>
       </div>
     );
@@ -796,12 +803,13 @@ function PreRacePicks({ allPicks, allResults, currentPlayer }) {
     <div>
       <div className="sh">
         <span className="sh-title">Pre-Race Picks</span>
-        <span className="sh-meta">Everyone's picks · locked races</span>
+        <span className="sh-meta">Everyone's picks · live</span>
       </div>
 
       <div className="prerace-race-grid">
-        {lockedRaces.map(r => {
+        {visibleRaces.map(r => {
           const count = PLAYERS.filter(p => allPicks[p]?.[r.id]).length;
+          const isLocked = isRaceLocked(r);
           return (
             <div
               key={r.id}
@@ -811,6 +819,7 @@ function PreRacePicks({ allPicks, allResults, currentPlayer }) {
               <div className="prerace-rc-name">{r.flag} {r.name}</div>
               <div className="prerace-rc-date">{r.date}</div>
               <div className="prerace-rc-count">{count}/{PLAYERS.length} submitted</div>
+              {!isLocked && <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:10,color:"#4cff91",letterSpacing:"0.08em",marginTop:2}}>OPEN</div>}
             </div>
           );
         })}
@@ -820,7 +829,7 @@ function PreRacePicks({ allPicks, allResults, currentPlayer }) {
         <>
           <div className="prerace-section-banner">
             <div className="prerace-eyebrow">
-              {hasResult ? "Completed Race" : "Race Locked — Picks Revealed"}
+              {hasResult ? "Completed Race" : locked ? "Race Locked — Picks Frozen" : "Race Open — Picks Updating Live"}
             </div>
             <div className="prerace-title">{race.flag} {race.name} Grand Prix · R{race.id}</div>
             <div className="prerace-sub">{submittedCount} of {PLAYERS.length} players submitted picks</div>
