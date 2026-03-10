@@ -468,7 +468,7 @@ function Directions({ onBack }) {
         <div className="dir-section-title">The Basics</div>
         <div className="dir-card">
           <div className="dir-card-body">
-            Before each race, every player submits <strong>3 picks</strong>: a P10 driver, a DNF1 driver, and a top constructor. Picks lock automatically when race day arrives and cannot be changed after that. After the race, the admin enters the results and scores update instantly for everyone.
+            Before each race, every player submits <strong>3 picks</strong>: a P10 driver, a DNF1 driver, and a top constructor. Picks lock automatically when race day arrives and cannot be changed after that. After the race, the commissioner enters the results and scores update instantly for everyone.
           </div>
         </div>
       </div>
@@ -1035,7 +1035,7 @@ function AdminPanel({ allResults, onSaveResults }) {
   return (
     <div>
       <div className="sh">
-        <span className="sh-title">Admin</span>
+        <span className="sh-title">Commissioner</span>
         <span className="sh-meta">Enter Race Results</span>
       </div>
       <div className="admin-grid">
@@ -1136,7 +1136,7 @@ function Home({ onPlayer, onAdmin, onDirections }) {
         </div>
         <div className="home-card" onClick={() => setShowAdminModal(true)}>
           <div className="home-card-icon">⚙️</div>
-          <div className="home-card-title">Admin</div>
+          <div className="home-card-title">Commissioner</div>
           <div className="home-card-desc">Enter race results after each Grand Prix to update everyone's scores.</div>
         </div>
       </div>
@@ -1161,13 +1161,13 @@ function Home({ onPlayer, onAdmin, onDirections }) {
       {showAdminModal && (
         <div className="modal-bg" onClick={() => setShowAdminModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-title">Admin Login</div>
-            <div className="modal-sub">Enter the admin password</div>
+            <div className="modal-title">Commissioner Login</div>
+            <div className="modal-sub">Enter the commissioner password</div>
             <input type="password" className="input-field" placeholder="Password" value={adminPw}
               onChange={e => { setAdminPw(e.target.value); setAdminErr(false); }}
               onKeyDown={e => e.key === "Enter" && handleAdminGo()} autoFocus />
             {adminErr && <div className="input-error">Incorrect password.</div>}
-            <button className="btn-primary" onClick={handleAdminGo}>Enter Admin</button>
+            <button className="btn-primary" onClick={handleAdminGo}>Enter Commissioner</button>
             <button className="modal-close" onClick={() => setShowAdminModal(false)}>Cancel</button>
           </div>
         </div>
@@ -1254,7 +1254,7 @@ export default function App() {
         <div className="topbar">
           <div className="topbar-logo">P10 · DNF1 · <span>CON</span></div>
           <div className="topbar-user">
-            <span className="topbar-name">Admin Mode</span>
+            <span className="topbar-name">Commissioner Mode</span>
             <button className="logout-btn" onClick={() => setScreen("home")}>← Exit</button>
           </div>
         </div>
