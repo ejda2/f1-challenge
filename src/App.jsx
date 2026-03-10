@@ -1227,7 +1227,7 @@ export default function App() {
     <><style>{CSS}</style>
       <div className="shell">
         <div className="topbar">
-          <div className="topbar-logo">P10 · DNF1 · <span>CON</span></div>
+          <div className="topbar-logo">P10 · DNF1 · <span>CONSTRUCTORS</span></div>
           <div className="topbar-user">
             <span className="topbar-name">Commissioner Mode</span>
             <button className="logout-btn" onClick={() => setScreen("home")}>← Exit</button>
@@ -1251,7 +1251,7 @@ export default function App() {
     <><style>{CSS}</style>
       <div className="shell">
         <div className="topbar">
-          <div className="topbar-logo">P10 · DNF1 · <span>CON</span></div>
+          <div className="topbar-logo">P10 · DNF1 · <span>CONSTRUCTORS</span></div>
           <div className="topbar-user">
             <span className="topbar-name">Playing as <strong>{currentPlayer}</strong></span>
             <button className="logout-btn" onClick={() => { setScreen("home"); setCurrentPlayer(null); }}>Switch</button>
