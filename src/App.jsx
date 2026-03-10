@@ -41,32 +41,7 @@ const DRIVER_CONSTRUCTOR = {
 
 const F1_PTS = [25,18,15,12,10,8,6,4,2,1];
 
-const RACE_RESULTS_LINKS = {
-  1:"https://www.formula1.com/en/results/2026/races/australia/race-result",
-  2:"https://www.formula1.com/en/results/2026/races/china/race-result",
-  3:"https://www.formula1.com/en/results/2026/races/japan/race-result",
-  4:"https://www.formula1.com/en/results/2026/races/bahrain/race-result",
-  5:"https://www.formula1.com/en/results/2026/races/saudi-arabia/race-result",
-  6:"https://www.formula1.com/en/results/2026/races/miami/race-result",
-  7:"https://www.formula1.com/en/results/2026/races/canada/race-result",
-  8:"https://www.formula1.com/en/results/2026/races/monaco/race-result",
-  9:"https://www.formula1.com/en/results/2026/races/spain/race-result",
-  10:"https://www.formula1.com/en/results/2026/races/austria/race-result",
-  11:"https://www.formula1.com/en/results/2026/races/great-britain/race-result",
-  12:"https://www.formula1.com/en/results/2026/races/belgium/race-result",
-  13:"https://www.formula1.com/en/results/2026/races/hungary/race-result",
-  14:"https://www.formula1.com/en/results/2026/races/netherlands/race-result",
-  15:"https://www.formula1.com/en/results/2026/races/italy/race-result",
-  16:"https://www.formula1.com/en/results/2026/races/madrid/race-result",
-  17:"https://www.formula1.com/en/results/2026/races/azerbaijan/race-result",
-  18:"https://www.formula1.com/en/results/2026/races/singapore/race-result",
-  19:"https://www.formula1.com/en/results/2026/races/united-states/race-result",
-  20:"https://www.formula1.com/en/results/2026/races/mexico/race-result",
-  21:"https://www.formula1.com/en/results/2026/races/brazil/race-result",
-  22:"https://www.formula1.com/en/results/2026/races/las-vegas/race-result",
-  23:"https://www.formula1.com/en/results/2026/races/qatar/race-result",
-  24:"https://www.formula1.com/en/results/2026/races/abu-dhabi/race-result",
-};
+const F1_RESULTS_URL = "https://www.formula1.com/en/results/2026/races";
 
 function calcConstructorOrder(finishing_order) {
   const pts = {};
@@ -910,7 +885,7 @@ function RaceResultsView({ allPicks, allResults, currentPlayer, standings }) {
         <div className="result-panel">
           <div className="rp-title">{race.flag} {race.name} Grand Prix</div>
           {result && (
-            <a href={RACE_RESULTS_LINKS[race.id]} target="_blank" rel="noopener noreferrer" className="rp-f1-link">
+            <a href={F1_RESULTS_URL} target="_blank" rel="noopener noreferrer" className="rp-f1-link">
               🏁 Official F1 Race Results ↗
             </a>
           )}
