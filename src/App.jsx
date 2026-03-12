@@ -997,7 +997,106 @@ function CommissionerStandings({ standings, allResults }) {
   );
 }
 
-function AdminPanel({ allResults, onSaveResults, standings }) {
+function CommissionerPicks({ allPicks, onSavePick }) {
+  const [selectedPlayer, setSelectedPlayer] = useState(PLAYERS[0]);
+  const [selectedRace, setSelectedRace] = useState(1);
+  const [form, setForm] = useState({ p10: "", dnf1: "", constructor: "" });
+  const [saved, setSaved] = useState(false);
+
+  const existingPick = allPicks[selectedPlayer]?.[selectedRace];
+
+  useEffect(() => {
+    const existing = allPicks[selectedPlayer]?.[selectedRace] || {};
+    setForm({ p10: existing.p10 || "", dnf1: existing.dnf1 || "", constructor: existing.constructor || "" });
+    setSaved(false);
+  }, [selectedPlayer, selectedRace]);
+
+  const handleSave = () => {
+    if (!form.p10 || !form.dnf1 || !form.constructor) return;
+    onSavePick(selectedPlayer, selectedRace, form);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 3000);
+  };
+
+  const race = RACES.find(r => r.id === selectedRace);
+
+  return (
+    <div>
+      <div style={{display:"flex",alignItems:"baseline",gap:12,marginBottom:20}}>
+        <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:700,letterSpacing:"0.08em",color:"#fff",textTransform:"uppercase"}}>Player Picks</span>
+        <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:13,color:"#666",letterSpacing:"0.1em",textTransform:"uppercase"}}>Override or enter any player's picks</span>
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:20}}>
+        <div>
+          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:12,letterSpacing:"0.18em",color:"#888",textTransform:"uppercase",marginBottom:6}}>Player</div>
+          <select
+            className="form-select"
+            value={selectedPlayer}
+            onChange={e => setSelectedPlayer(e.target.value)}
+          >
+            {PLAYERS.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+        </div>
+        <div>
+          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:12,letterSpacing:"0.18em",color:"#888",textTransform:"uppercase",marginBottom:6}}>Race</div>
+          <select
+            className="form-select"
+            value={selectedRace}
+            onChange={e => setSelectedRace(Number(e.target.value))}
+          >
+            {RACES.map(r => <option key={r.id} value={r.id}>{r.flag} R{r.id} · {r.name}</option>)}
+          </select>
+        </div>
+      </div>
+
+      <div className="pick-form">
+        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:12,letterSpacing:"0.2em",color:"#e10600",textTransform:"uppercase",marginBottom:4}}>
+          {existingPick ? "Override Existing Pick" : "Enter Pick"}
+        </div>
+        <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:26,color:"#fff",marginBottom:16}}>
+          {selectedPlayer} · {race?.flag} {race?.name} · R{race?.id}
+        </div>
+
+        {existingPick && (
+          <div style={{background:"#111",border:"1px solid #2a1800",borderRadius:6,padding:"10px 14px",marginBottom:16,fontFamily:"'Barlow Condensed',sans-serif",fontSize:13,color:"#cc8800",letterSpacing:"0.04em"}}>
+            ⚠ This player already has picks for this race. Saving will overwrite them.
+          </div>
+        )}
+
+        <div className="form-row">
+          <label className="form-label">P10 Driver <span>*</span></label>
+          <select className="form-select" value={form.p10} onChange={e => setForm(f => ({...f, p10: e.target.value}))}>
+            <option value="">Select a driver...</option>
+            {DRIVERS.map(d => <option key={d} value={d}>{d}</option>)}
+          </select>
+        </div>
+        <div className="form-row">
+          <label className="form-label">DNF1 Driver <span>*</span></label>
+          <select className="form-select" value={form.dnf1} onChange={e => setForm(f => ({...f, dnf1: e.target.value}))}>
+            <option value="">Select a driver...</option>
+            {DRIVERS.map(d => <option key={d} value={d}>{d}</option>)}
+          </select>
+        </div>
+        <div className="form-row">
+          <label className="form-label">Top Constructor <span>*</span></label>
+          <select className="form-select" value={form.constructor} onChange={e => setForm(f => ({...f, constructor: e.target.value}))}>
+            <option value="">Select a constructor...</option>
+            {CONSTRUCTORS.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+        <div className="form-save-row">
+          <button className="save-btn" onClick={handleSave} disabled={!form.p10 || !form.dnf1 || !form.constructor}>
+            {existingPick ? "Overwrite Picks" : "Save Picks"}
+          </button>
+          {saved && <span className="save-confirm">✓ Picks saved for {selectedPlayer}!</span>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AdminPanel({ allResults, onSaveResults, standings, allPicks, onSavePick }) {
   const [adminTab, setAdminTab] = useState("results");
   const [selectedRace, setSelectedRace] = useState(1);
   const [order, setOrder] = useState([...DRIVERS]);
@@ -1048,9 +1147,12 @@ function AdminPanel({ allResults, onSaveResults, standings }) {
       <nav className="tabs" style={{marginBottom:28}}>
         <button className={`tab ${adminTab==="results"?"active":""}`} onClick={() => setAdminTab("results")}>Enter Results</button>
         <button className={`tab ${adminTab==="standings"?"active":""}`} onClick={() => setAdminTab("standings")}>Season Standings</button>
+        <button className={`tab ${adminTab==="picks"?"active":""}`} onClick={() => setAdminTab("picks")}>Player Picks</button>
       </nav>
 
       {adminTab === "standings" && <CommissionerStandings standings={standings} allResults={allResults} />}
+
+      {adminTab === "picks" && <CommissionerPicks allPicks={allPicks} onSavePick={onSavePick} />}
 
       {adminTab === "results" && (
       <div className="admin-grid">
@@ -1290,7 +1392,7 @@ export default function App() {
           </div>
         </div>
         <div className="content">
-          <AdminPanel allResults={allResults} onSaveResults={handleSaveResults} standings={standings} />
+          <AdminPanel allResults={allResults} onSaveResults={handleSaveResults} standings={standings} allPicks={allPicks} onSavePick={handleSavePick} />
         </div>
       </div>
     </>
