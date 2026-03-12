@@ -971,29 +971,24 @@ function CommissionerStandings({ standings, allResults }) {
 
   return (
     <div>
-      <div className="sh">
-        <span className="sh-title">Season Standings</span>
-        <span className="sh-meta">{completedCount} of 24 races complete</span>
+      <div style={{display:"flex",alignItems:"baseline",gap:12,marginBottom:14}}>
+        <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:700,letterSpacing:"0.08em",color:"#fff",textTransform:"uppercase"}}>Season Standings</span>
+        <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:13,color:"#666",letterSpacing:"0.1em",textTransform:"uppercase"}}>{completedCount} of 24 races complete</span>
       </div>
-      <div style={{background:"#0a0a0a",border:"1px solid #1a1a1a",borderRadius:10,padding:"20px 24px"}}>
-        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,letterSpacing:"0.2em",color:"#444",textTransform:"uppercase",display:"grid",gridTemplateColumns:"40px 1fr 80px 80px",gap:8,paddingBottom:10,borderBottom:"1px solid #111",marginBottom:4}}>
+      <div style={{background:"#0a0a0a",border:"1px solid #1a1a1a",borderRadius:10,padding:"14px 20px"}}>
+        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:10,letterSpacing:"0.2em",color:"#444",textTransform:"uppercase",display:"grid",gridTemplateColumns:"36px 1fr 70px 70px",gap:8,paddingBottom:8,borderBottom:"1px solid #111",marginBottom:2}}>
           <span>Rank</span><span>Player</span><span style={{textAlign:"right"}}>Points</span><span style={{textAlign:"right"}}>Races</span>
         </div>
         {standings.map((entry, i) => {
           const rank = i + 1;
           const racesPlayed = Object.keys(entry.raceTotals).length;
-          const rankColor = rank===1?"#FFD700":rank===2?"#C0C0C0":rank===3?"#CD7F32":"#333";
+          const rankColor = rank===1?"#FFD700":rank===2?"#C0C0C0":rank===3?"#CD7F32":"#444";
           return (
-            <div key={entry.player} style={{display:"grid",gridTemplateColumns:"40px 1fr 80px 80px",gap:8,alignItems:"center",padding:"9px 0",borderBottom:"1px solid #0d0d0d"}}>
-              <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,color:rankColor,lineHeight:1}}>{rank}</span>
-              <div>
-                <div style={{fontSize:15,fontWeight:500,color:"#ddd"}}>{entry.player}</div>
-                <div style={{height:2,background:"#111",borderRadius:1,marginTop:4,overflow:"hidden",maxWidth:200}}>
-                  <div style={{height:"100%",background:"linear-gradient(90deg,#e10600,#ff4500)",borderRadius:1,width:`${(entry.total/maxPts)*100}%`}}/>
-                </div>
-              </div>
-              <div style={{textAlign:"right",fontFamily:"'Bebas Neue',sans-serif",fontSize:24,color:"#fff",lineHeight:1}}>{entry.total}</div>
-              <div style={{textAlign:"right",fontFamily:"'Barlow Condensed',sans-serif",fontSize:13,color:"#555"}}>{racesPlayed} races</div>
+            <div key={entry.player} style={{display:"grid",gridTemplateColumns:"36px 1fr 70px 70px",gap:8,alignItems:"center",padding:"6px 0",borderBottom:"1px solid #0d0d0d"}}>
+              <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:18,color:rankColor,lineHeight:1}}>{rank}</span>
+              <div style={{fontSize:14,fontWeight:500,color:"#ddd",lineHeight:1.2}}>{entry.player}</div>
+              <div style={{textAlign:"right",fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color:"#fff",lineHeight:1}}>{entry.total}</div>
+              <div style={{textAlign:"right",fontFamily:"'Barlow Condensed',sans-serif",fontSize:12,color:"#555"}}>{racesPlayed}r</div>
             </div>
           );
         })}
