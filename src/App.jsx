@@ -137,8 +137,9 @@ function scoreCon(team, constructor_order) {
   return [3,2,1][pos] ?? 0;
 }
 
-function computeStandings(allPicks, allResults) {
-  return PLAYERS.map(player => {
+function computeStandings(allPicks, allResults, players) {
+  const roster = players || PLAYERS;
+  return roster.map(player => {
     let total = 0;
     const raceTotals = {};
     const playerPicks = allPicks[player] || {};
@@ -174,6 +175,14 @@ async function fbSaveResults(results) {
   Object.entries(results).forEach(([k, v]) => { serialized[`r${k}`] = v; });
   await setDoc(doc(db, "data", "results"), serialized);
 }
+async function fbSaveConfig(config) {
+  await setDoc(doc(db, "data", "config"), config);
+}
+
+const DEFAULT_CONFIG = {
+  password: "f1admin2026",
+  players: [...PLAYERS],
+};
 
 // ─── STYLES ──────────────────────────────────────────────────────────────────
 
@@ -746,11 +755,12 @@ function MyPicks({ player, allPicks, allResults, onSave }) {
 
 // ─── PRE-RACE PICKS ───────────────────────────────────────────────────────────
 
-function PreRacePicks({ allPicks, allResults, currentPlayer }) {
+function PreRacePicks({ allPicks, allResults, currentPlayer, players }) {
+  const roster = players || PLAYERS;
   // Show all races that have at least one pick submitted, or are the next upcoming race
   const nextRace = getNextRace();
   const visibleRaces = RACES.filter(r => {
-    const hasAnyPick = PLAYERS.some(p => allPicks[p]?.[r.id]);
+    const hasAnyPick = roster.some(p => allPicks[p]?.[r.id]);
     return hasAnyPick || r.id === nextRace?.id;
   });
 
@@ -772,7 +782,7 @@ function PreRacePicks({ allPicks, allResults, currentPlayer }) {
     );
   }
 
-  const submittedCount = PLAYERS.filter(p => allPicks[p]?.[selectedRace]).length;
+  const submittedCount = roster.filter(p => allPicks[p]?.[selectedRace]).length;
 
   return (
     <div>
@@ -783,7 +793,7 @@ function PreRacePicks({ allPicks, allResults, currentPlayer }) {
 
       <div className="prerace-race-grid">
         {visibleRaces.map(r => {
-          const count = PLAYERS.filter(p => allPicks[p]?.[r.id]).length;
+          const count = roster.filter(p => allPicks[p]?.[r.id]).length;
           const isLocked = isRaceLocked(r);
           return (
             <div
@@ -793,7 +803,7 @@ function PreRacePicks({ allPicks, allResults, currentPlayer }) {
             >
               <div className="prerace-rc-name">{r.flag} {r.name}</div>
               <div className="prerace-rc-date">{r.date}</div>
-              <div className="prerace-rc-count">{count}/{PLAYERS.length} submitted</div>
+              <div className="prerace-rc-count">{count}/{roster.length} submitted</div>
               {!isLocked && <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:10,color:"#4cff91",letterSpacing:"0.08em",marginTop:2}}>OPEN</div>}
             </div>
           );
@@ -807,7 +817,7 @@ function PreRacePicks({ allPicks, allResults, currentPlayer }) {
               {hasResult ? "Completed Race" : locked ? "Race Locked — Picks Frozen" : "Race Open — Picks Updating Live"}
             </div>
             <div className="prerace-title">{race.flag} {race.name} Grand Prix · R{race.id}</div>
-            <div className="prerace-sub">{submittedCount} of {PLAYERS.length} players submitted picks</div>
+            <div className="prerace-sub">{submittedCount} of {roster.length} players submitted picks</div>
           </div>
 
           <table className="prerace-table">
@@ -820,7 +830,7 @@ function PreRacePicks({ allPicks, allResults, currentPlayer }) {
               </tr>
             </thead>
             <tbody>
-              {PLAYERS.map(player => {
+              {roster.map(player => {
                 const pick = allPicks[player]?.[selectedRace];
                 const isMe = player === currentPlayer;
                 return (
@@ -965,6 +975,186 @@ function RaceResultsView({ allPicks, allResults, currentPlayer, standings }) {
 
 // ─── ADMIN PANEL ─────────────────────────────────────────────────────────────
 
+function CommissionerGuide({ onBack }) {
+  return (
+    <div className="directions">
+      <button className="directions-back" onClick={onBack}>← Back to Commissioner</button>
+      <div className="dir-title">Commissioner Guide</div>
+      <div className="dir-sub">P10 · DNF1 · CONSTRUCTORS CHALLENGE · 2026</div>
+
+      <div className="dir-section">
+        <div className="dir-section-title">Enter Results</div>
+        <div className="dir-card">
+          <div className="dir-card-title">After each race</div>
+          <div className="dir-card-body" style={{marginTop:6}}>
+            Use the <strong>finishing order dropdowns</strong> to set P1 through P22. Selecting a driver in one slot automatically swaps them with their previous position — no duplicates are possible. The constructor standings calculate automatically from the driver order. Set the <strong>DNF1</strong> dropdown to the first driver who retired. Hit <strong>Save Results</strong> to publish scores instantly to all players.
+          </div>
+        </div>
+        <div className="dir-card" style={{marginTop:10}}>
+          <div className="dir-card-title">Correcting a mistake</div>
+          <div className="dir-card-body" style={{marginTop:6}}>
+            You can re-enter and overwrite results for any race at any time. Just select the race from the left sidebar, adjust the order, and save again. Scores recalculate immediately for all players.
+          </div>
+        </div>
+      </div>
+
+      <div className="dir-section">
+        <div className="dir-section-title">Season Standings</div>
+        <div className="dir-card">
+          <div className="dir-card-body">
+            Shows the full 15-player leaderboard in a compact, screenshot-friendly format. Designed to fit on one screen so you can send it to the group after each race. Rank, player name, total points, and races played are all visible at a glance.
+          </div>
+        </div>
+      </div>
+
+      <div className="dir-section">
+        <div className="dir-section-title">Player Picks</div>
+        <div className="dir-card">
+          <div className="dir-card-body">
+            Use this tab when a player forgets to submit their picks before a race starts. Select the player and the race, enter their three picks, and save. You can also use this to correct a pick entered in error. If picks already exist for that player and race, a warning will appear before you overwrite them. Picks entered here are treated identically to player-submitted picks for scoring purposes.
+          </div>
+        </div>
+      </div>
+
+      <div className="dir-section">
+        <div className="dir-section-title">Settings</div>
+        <div className="dir-card">
+          <div className="dir-card-body">
+            Manage the league roster and commissioner password. You can add players up to the 15-player maximum. Removing a player will hide them from the standings and pick screens — their historical data is preserved in the database but will not display. The password change takes effect immediately on all devices.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CommissionerSettings({ config, onSaveConfig }) {
+  const [players, setPlayers] = useState([...(config.players || PLAYERS)]);
+  const [newPlayer, setNewPlayer] = useState("");
+  const [newPw, setNewPw] = useState("");
+  const [confirmPw, setConfirmPw] = useState("");
+  const [pwSaved, setPwSaved] = useState(false);
+  const [rosterSaved, setRosterSaved] = useState(false);
+  const [pwErr, setPwErr] = useState("");
+
+  const handleAddPlayer = () => {
+    const name = newPlayer.trim();
+    if (!name) return;
+    if (players.length >= 15) return;
+    if (players.map(p => p.toLowerCase()).includes(name.toLowerCase())) return;
+    setPlayers(prev => [...prev, name]);
+    setNewPlayer("");
+  };
+
+  const handleRemovePlayer = (name) => {
+    setPlayers(prev => prev.filter(p => p !== name));
+  };
+
+  const handleSaveRoster = () => {
+    onSaveConfig({ ...config, players });
+    setRosterSaved(true);
+    setTimeout(() => setRosterSaved(false), 3000);
+  };
+
+  const handleSavePassword = () => {
+    setPwErr("");
+    if (!newPw) { setPwErr("Enter a new password."); return; }
+    if (newPw !== confirmPw) { setPwErr("Passwords do not match."); return; }
+    if (newPw.length < 6) { setPwErr("Password must be at least 6 characters."); return; }
+    onSaveConfig({ ...config, password: newPw });
+    setPwSaved(true);
+    setNewPw("");
+    setConfirmPw("");
+    setTimeout(() => setPwSaved(false), 3000);
+  };
+
+  return (
+    <div>
+      <div style={{display:"flex",alignItems:"baseline",gap:12,marginBottom:24}}>
+        <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:700,letterSpacing:"0.08em",color:"#fff",textTransform:"uppercase"}}>Settings</span>
+      </div>
+
+      <div style={{background:"#0d0d0d",border:"1px solid #1a1a1a",borderRadius:10,padding:24,marginBottom:20}}>
+        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:13,letterSpacing:"0.18em",color:"#999",textTransform:"uppercase",marginBottom:16,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <span>Player Roster</span>
+          <span style={{color: players.length >= 15 ? "#e10600" : "#555"}}>{players.length} / 15</span>
+        </div>
+
+        <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:16}}>
+          {players.map(p => (
+            <div key={p} style={{display:"flex",alignItems:"center",justifyContent:"space-between",background:"#141414",border:"1px solid #1e1e1e",borderRadius:6,padding:"9px 14px"}}>
+              <span style={{fontSize:14,color:"#ddd"}}>{p}</span>
+              <button
+                onClick={() => handleRemovePlayer(p)}
+                style={{background:"none",border:"1px solid #2a0a0a",color:"#883333",borderRadius:4,padding:"3px 10px",fontSize:12,fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:"0.08em",transition:"all 0.15s"}}
+                onMouseOver={e => { e.target.style.borderColor="#e10600"; e.target.style.color="#ff4444"; }}
+                onMouseOut={e => { e.target.style.borderColor="#2a0a0a"; e.target.style.color="#883333"; }}
+              >Remove</button>
+            </div>
+          ))}
+        </div>
+
+        {players.length < 15 && (
+          <div style={{display:"flex",gap:8,marginBottom:16}}>
+            <input
+              className="input-field"
+              style={{marginBottom:0,flex:1}}
+              placeholder="New player name..."
+              value={newPlayer}
+              onChange={e => setNewPlayer(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && handleAddPlayer()}
+            />
+            <button
+              className="save-btn"
+              style={{padding:"12px 20px",whiteSpace:"nowrap"}}
+              onClick={handleAddPlayer}
+              disabled={!newPlayer.trim()}
+            >Add Player</button>
+          </div>
+        )}
+        {players.length >= 15 && (
+          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:13,color:"#e10600",letterSpacing:"0.05em",marginBottom:16}}>
+            Maximum of 15 players reached.
+          </div>
+        )}
+
+        <div style={{display:"flex",alignItems:"center",gap:12}}>
+          <button className="save-btn" onClick={handleSaveRoster}>Save Roster</button>
+          {rosterSaved && <span className="save-confirm">✓ Roster saved!</span>}
+        </div>
+      </div>
+
+      <div style={{background:"#0d0d0d",border:"1px solid #1a1a1a",borderRadius:10,padding:24}}>
+        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:13,letterSpacing:"0.18em",color:"#999",textTransform:"uppercase",marginBottom:16}}>
+          Change Commissioner Password
+        </div>
+        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:12,letterSpacing:"0.12em",color:"#555",marginBottom:4}}>Current password: <span style={{color:"#777"}}>{config.password}</span></div>
+        <div style={{marginTop:14}}>
+          <input
+            type="password"
+            className="input-field"
+            placeholder="New password (min 6 characters)"
+            value={newPw}
+            onChange={e => { setNewPw(e.target.value); setPwErr(""); }}
+          />
+          <input
+            type="password"
+            className="input-field"
+            placeholder="Confirm new password"
+            value={confirmPw}
+            onChange={e => { setConfirmPw(e.target.value); setPwErr(""); }}
+          />
+          {pwErr && <div className="input-error">{pwErr}</div>}
+          <div style={{display:"flex",alignItems:"center",gap:12}}>
+            <button className="save-btn" onClick={handleSavePassword}>Update Password</button>
+            {pwSaved && <span className="save-confirm">✓ Password updated!</span>}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function CommissionerStandings({ standings, allResults }) {
   const completedCount = Object.keys(allResults).length;
   const maxPts = standings[0]?.total || 1;
@@ -997,8 +1187,9 @@ function CommissionerStandings({ standings, allResults }) {
   );
 }
 
-function CommissionerPicks({ allPicks, onSavePick }) {
-  const [selectedPlayer, setSelectedPlayer] = useState(PLAYERS[0]);
+function CommissionerPicks({ allPicks, onSavePick, players }) {
+  const roster = players || PLAYERS;
+  const [selectedPlayer, setSelectedPlayer] = useState(roster[0]);
   const [selectedRace, setSelectedRace] = useState(1);
   const [form, setForm] = useState({ p10: "", dnf1: "", constructor: "" });
   const [saved, setSaved] = useState(false);
@@ -1035,7 +1226,7 @@ function CommissionerPicks({ allPicks, onSavePick }) {
             value={selectedPlayer}
             onChange={e => setSelectedPlayer(e.target.value)}
           >
-            {PLAYERS.map(p => <option key={p} value={p}>{p}</option>)}
+            {roster.map(p => <option key={p} value={p}>{p}</option>)}
           </select>
         </div>
         <div>
@@ -1096,7 +1287,7 @@ function CommissionerPicks({ allPicks, onSavePick }) {
   );
 }
 
-function AdminPanel({ allResults, onSaveResults, standings, allPicks, onSavePick }) {
+function AdminPanel({ allResults, onSaveResults, standings, allPicks, onSavePick, config, onSaveConfig, onHelp }) {
   const [adminTab, setAdminTab] = useState("results");
   const [selectedRace, setSelectedRace] = useState(1);
   const [order, setOrder] = useState([...DRIVERS]);
@@ -1144,15 +1335,26 @@ function AdminPanel({ allResults, onSaveResults, standings, allPicks, onSavePick
       <div className="sh">
         <span className="sh-title">Commissioner</span>
       </div>
-      <nav className="tabs" style={{marginBottom:28}}>
-        <button className={`tab ${adminTab==="results"?"active":""}`} onClick={() => setAdminTab("results")}>Enter Results</button>
-        <button className={`tab ${adminTab==="standings"?"active":""}`} onClick={() => setAdminTab("standings")}>Season Standings</button>
-        <button className={`tab ${adminTab==="picks"?"active":""}`} onClick={() => setAdminTab("picks")}>Player Picks</button>
-      </nav>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+        <nav className="tabs" style={{marginBottom:0,borderBottom:"none"}}>
+          <button className={`tab ${adminTab==="results"?"active":""}`} onClick={() => setAdminTab("results")}>Enter Results</button>
+          <button className={`tab ${adminTab==="standings"?"active":""}`} onClick={() => setAdminTab("standings")}>Season Standings</button>
+          <button className={`tab ${adminTab==="picks"?"active":""}`} onClick={() => setAdminTab("picks")}>Player Picks</button>
+          <button className={`tab ${adminTab==="settings"?"active":""}`} onClick={() => setAdminTab("settings")}>Settings</button>
+        </nav>
+        <button
+          onClick={onHelp}
+          style={{background:"none",border:"1px solid #222",color:"#888",borderRadius:6,padding:"6px 16px",fontFamily:"'Barlow Condensed',sans-serif",fontSize:13,letterSpacing:"0.12em",textTransform:"uppercase",whiteSpace:"nowrap",transition:"all 0.15s",flexShrink:0}}
+          onMouseOver={e => { e.target.style.borderColor="#555"; e.target.style.color="#fff"; }}
+          onMouseOut={e => { e.target.style.borderColor="#222"; e.target.style.color="#888"; }}
+        >? Help</button>
+      </div>
+      <div style={{borderBottom:"1px solid #111",marginBottom:28}} />
 
       {adminTab === "standings" && <CommissionerStandings standings={standings} allResults={allResults} />}
 
-      {adminTab === "picks" && <CommissionerPicks allPicks={allPicks} onSavePick={onSavePick} />}
+      {adminTab === "picks" && <CommissionerPicks allPicks={allPicks} onSavePick={onSavePick} players={config?.players} />}
+      {adminTab === "settings" && <CommissionerSettings config={config} onSaveConfig={onSaveConfig} />}
 
       {adminTab === "results" && (
       <div className="admin-grid">
@@ -1237,7 +1439,7 @@ function AdminPanel({ allResults, onSaveResults, standings, allPicks, onSavePick
 
 // ─── HOME ─────────────────────────────────────────────────────────────────────
 
-function Home({ onPlayer, onAdmin, onDirections }) {
+function Home({ onPlayer, onAdmin, onDirections, config }) {
   const [showPlayerModal, setShowPlayerModal] = useState(false);
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
@@ -1246,7 +1448,8 @@ function Home({ onPlayer, onAdmin, onDirections }) {
 
   const handlePlayerGo = () => { if (selectedPlayer) onPlayer(selectedPlayer); };
   const handleAdminGo = () => {
-    if (adminPw === ADMIN_PASSWORD) { onAdmin(); setAdminErr(false); }
+    const pw = config?.password || ADMIN_PASSWORD;
+    if (adminPw === pw) { onAdmin(); setAdminErr(false); }
     else setAdminErr(true);
   };
 
@@ -1281,7 +1484,7 @@ function Home({ onPlayer, onAdmin, onDirections }) {
             <div className="modal-title">Who Are You?</div>
             <div className="modal-sub">Select your name from the list</div>
             <div className="player-list">
-              {PLAYERS.map(p => (
+              {(config?.players || PLAYERS).map(p => (
                 <button key={p} className={`player-btn ${selectedPlayer===p?"selected":""}`} onClick={() => setSelectedPlayer(p)}>{p}</button>
               ))}
             </div>
@@ -1316,13 +1519,15 @@ export default function App() {
   const [currentPlayer, setCurrentPlayer] = useState(null);
   const [allPicks, setAllPicks] = useState(SEED_PICKS);
   const [allResults, setAllResults] = useState(SEED_RESULTS);
+  const [config, setConfig] = useState(DEFAULT_CONFIG);
   const [playerTab, setPlayerTab] = useState("picks");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let picksLoaded = false;
     let resultsLoaded = false;
-    const checkDone = () => { if (picksLoaded && resultsLoaded) setLoading(false); };
+    let configLoaded = false;
+    const checkDone = () => { if (picksLoaded && resultsLoaded && configLoaded) setLoading(false); };
     const unsubPicks = onSnapshot(doc(db, "data", "picks"), snap => {
       if (snap.exists()) setAllPicks(snap.data());
       else fbSavePicks(SEED_PICKS);
@@ -1337,7 +1542,12 @@ export default function App() {
       } else { fbSaveResults(SEED_RESULTS); }
       resultsLoaded = true; checkDone();
     });
-    return () => { unsubPicks(); unsubResults(); };
+    const unsubConfig = onSnapshot(doc(db, "data", "config"), snap => {
+      if (snap.exists()) setConfig(snap.data());
+      else fbSaveConfig(DEFAULT_CONFIG);
+      configLoaded = true; checkDone();
+    });
+    return () => { unsubPicks(); unsubResults(); unsubConfig(); };
   }, []);
 
   const handleSavePick = useCallback((player, raceId, pick) => {
@@ -1356,7 +1566,12 @@ export default function App() {
     });
   }, []);
 
-  const standings = computeStandings(allPicks, allResults);
+  const handleSaveConfig = useCallback((newConfig) => {
+    setConfig(newConfig);
+    fbSaveConfig(newConfig);
+  }, []);
+
+  const standings = computeStandings(allPicks, allResults, config.players);
 
   if (loading) return (
     <><style>{CSS}</style>
@@ -1371,12 +1586,17 @@ export default function App() {
     <><style>{CSS}</style><Directions onBack={() => setScreen("home")} /></>
   );
 
+  if (screen === "commguide") return (
+    <><style>{CSS}</style><CommissionerGuide onBack={() => setScreen("admin")} /></>
+  );
+
   if (screen === "home") return (
     <><style>{CSS}</style>
       <Home
         onPlayer={name => { setCurrentPlayer(name); setScreen("player"); setPlayerTab("picks"); }}
         onAdmin={() => setScreen("admin")}
         onDirections={() => setScreen("directions")}
+        config={config}
       />
     </>
   );
@@ -1392,7 +1612,16 @@ export default function App() {
           </div>
         </div>
         <div className="content">
-          <AdminPanel allResults={allResults} onSaveResults={handleSaveResults} standings={standings} allPicks={allPicks} onSavePick={handleSavePick} />
+          <AdminPanel
+            allResults={allResults}
+            onSaveResults={handleSaveResults}
+            standings={standings}
+            allPicks={allPicks}
+            onSavePick={handleSavePick}
+            config={config}
+            onSaveConfig={handleSaveConfig}
+            onHelp={() => setScreen("commguide")}
+          />
         </div>
       </div>
     </>
@@ -1422,7 +1651,7 @@ export default function App() {
             ))}
           </nav>
           {playerTab==="picks"     && <MyPicks player={currentPlayer} allPicks={allPicks} allResults={allResults} onSave={handleSavePick}/>}
-          {playerTab==="prerace"   && <PreRacePicks allPicks={allPicks} allResults={allResults} currentPlayer={currentPlayer}/>}
+          {playerTab==="prerace"   && <PreRacePicks allPicks={allPicks} allResults={allResults} currentPlayer={currentPlayer} players={config.players}/>}
           {playerTab==="standings" && <Leaderboard standings={standings} allResults={allResults} currentPlayer={currentPlayer}/>}
           {playerTab==="results"   && <RaceResultsView allPicks={allPicks} allResults={allResults} currentPlayer={currentPlayer} standings={standings}/>}
         </div>
