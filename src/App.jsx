@@ -1073,20 +1073,35 @@ function AdminPanel({ allResults, onSaveResults, standings }) {
             Finishing Order (P1 → P22)
             <span className="reset-link" onClick={() => setOrder([...DRIVERS])}>Reset</span>
           </div>
-          <div className="driver-order-list">
-            {order.map((driver, i) => (
-              <div key={driver} className="driver-order-item">
-                <span className="doi-pos">{i + 1}</span>
-                <span className="doi-name">
-                  {driver}
-                  <span style={{fontSize:11,color:"#555",marginLeft:8,fontFamily:"'Barlow Condensed',sans-serif"}}>{DRIVER_CONSTRUCTOR[driver]}</span>
-                </span>
-                <button className="move-btn" onClick={() => moveDriver(i, -1)}>↑</button>
-                <button className="move-btn" onClick={() => moveDriver(i, 1)}>↓</button>
-              </div>
-            ))}
-          </div>
 
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:12}}>
+            {order.map((driver, i) => {
+              const available = DRIVERS.filter(d => d === driver || !order.slice(0, order.length).filter((_, idx) => idx !== i).includes(d));
+              return (
+                <div key={i} style={{display:"flex",alignItems:"center",gap:8,background:"#141414",border:"1px solid #1a1a1a",borderRadius:5,padding:"6px 10px"}}>
+                  <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:16,color:"#444",width:24,flexShrink:0}}>{i+1}</span>
+                  <select
+                    value={driver}
+                    onChange={e => {
+                      const newDriver = e.target.value;
+                      if (!newDriver) return;
+                      const newOrder = [...order];
+                      const swapIdx = newOrder.indexOf(newDriver);
+                      if (swapIdx !== -1) newOrder[swapIdx] = newOrder[i];
+                      newOrder[i] = newDriver;
+                      setOrder(newOrder);
+                    }}
+                    style={{flex:1,background:"transparent",border:"none",color:"#ccc",fontSize:13,fontFamily:"'Barlow',sans-serif",outline:"none",cursor:"pointer"}}
+                  >
+                    {DRIVERS.map(d => (
+                      <option key={d} value={d} style={{background:"#1a1a1a"}}>{d}</option>
+                    ))}
+                  </select>
+                  <span style={{fontSize:11,color:"#444",fontFamily:"'Barlow Condensed',sans-serif",flexShrink:0}}>{DRIVER_CONSTRUCTOR[driver]?.slice(0,4)}</span>
+                </div>
+              );
+            })}
+          </div>
           <div className="admin-section-title">First DNF (DNF1)</div>
           <select className="form-select" style={{marginBottom:20}} value={dnf1} onChange={e => setDnf1(e.target.value)}>
             <option value="">None / No DNF</option>
