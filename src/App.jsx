@@ -1473,7 +1473,7 @@ function Home({ onPlayer, onAdmin, onDirections, config }) {
         <div className="home-card" onClick={() => setShowAdminModal(true)}>
           <div className="home-card-icon">⚙️</div>
           <div className="home-card-title">Commissioner</div>
-          <div className="home-card-desc">Enter race results after each Grand Prix to update everyone's scores.</div>
+          <div className="home-card-desc">Enter race results, manage player picks, view standings, and configure league settings.</div>
         </div>
       </div>
       <button className="home-how-btn" onClick={onDirections}>📋 How to Play</button>
