@@ -965,7 +965,45 @@ function RaceResultsView({ allPicks, allResults, currentPlayer, standings }) {
 
 // ─── ADMIN PANEL ─────────────────────────────────────────────────────────────
 
-function AdminPanel({ allResults, onSaveResults }) {
+function CommissionerStandings({ standings, allResults }) {
+  const completedCount = Object.keys(allResults).length;
+  const maxPts = standings[0]?.total || 1;
+
+  return (
+    <div>
+      <div className="sh">
+        <span className="sh-title">Season Standings</span>
+        <span className="sh-meta">{completedCount} of 24 races complete</span>
+      </div>
+      <div style={{background:"#0a0a0a",border:"1px solid #1a1a1a",borderRadius:10,padding:"20px 24px"}}>
+        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,letterSpacing:"0.2em",color:"#444",textTransform:"uppercase",display:"grid",gridTemplateColumns:"40px 1fr 80px 80px",gap:8,paddingBottom:10,borderBottom:"1px solid #111",marginBottom:4}}>
+          <span>Rank</span><span>Player</span><span style={{textAlign:"right"}}>Points</span><span style={{textAlign:"right"}}>Races</span>
+        </div>
+        {standings.map((entry, i) => {
+          const rank = i + 1;
+          const racesPlayed = Object.keys(entry.raceTotals).length;
+          const rankColor = rank===1?"#FFD700":rank===2?"#C0C0C0":rank===3?"#CD7F32":"#333";
+          return (
+            <div key={entry.player} style={{display:"grid",gridTemplateColumns:"40px 1fr 80px 80px",gap:8,alignItems:"center",padding:"9px 0",borderBottom:"1px solid #0d0d0d"}}>
+              <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,color:rankColor,lineHeight:1}}>{rank}</span>
+              <div>
+                <div style={{fontSize:15,fontWeight:500,color:"#ddd"}}>{entry.player}</div>
+                <div style={{height:2,background:"#111",borderRadius:1,marginTop:4,overflow:"hidden",maxWidth:200}}>
+                  <div style={{height:"100%",background:"linear-gradient(90deg,#e10600,#ff4500)",borderRadius:1,width:`${(entry.total/maxPts)*100}%`}}/>
+                </div>
+              </div>
+              <div style={{textAlign:"right",fontFamily:"'Bebas Neue',sans-serif",fontSize:24,color:"#fff",lineHeight:1}}>{entry.total}</div>
+              <div style={{textAlign:"right",fontFamily:"'Barlow Condensed',sans-serif",fontSize:13,color:"#555"}}>{racesPlayed} races</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function AdminPanel({ allResults, onSaveResults, standings }) {
+  const [adminTab, setAdminTab] = useState("results");
   const [selectedRace, setSelectedRace] = useState(1);
   const [order, setOrder] = useState([...DRIVERS]);
   const [dnf1, setDnf1] = useState("");
@@ -1011,8 +1049,15 @@ function AdminPanel({ allResults, onSaveResults }) {
     <div>
       <div className="sh">
         <span className="sh-title">Commissioner</span>
-        <span className="sh-meta">Enter Race Results</span>
       </div>
+      <nav className="tabs" style={{marginBottom:28}}>
+        <button className={`tab ${adminTab==="results"?"active":""}`} onClick={() => setAdminTab("results")}>Enter Results</button>
+        <button className={`tab ${adminTab==="standings"?"active":""}`} onClick={() => setAdminTab("standings")}>Season Standings</button>
+      </nav>
+
+      {adminTab === "standings" && <CommissionerStandings standings={standings} allResults={allResults} />}
+
+      {adminTab === "results" && (
       <div className="admin-grid">
         <div className="admin-race-list">
           {RACES.map(r => (
@@ -1073,6 +1118,7 @@ function AdminPanel({ allResults, onSaveResults }) {
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 }
@@ -1234,7 +1280,7 @@ export default function App() {
           </div>
         </div>
         <div className="content">
-          <AdminPanel allResults={allResults} onSaveResults={handleSaveResults} />
+          <AdminPanel allResults={allResults} onSaveResults={handleSaveResults} standings={standings} />
         </div>
       </div>
     </>
