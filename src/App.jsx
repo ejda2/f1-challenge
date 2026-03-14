@@ -59,12 +59,12 @@ function calcConstructorOrder(finishing_order) {
   });
 }
 
-const RACES = [
+const CANCELLED_RACES = [4, 5]; // Bahrain and Saudi Arabia — cancelled due to Iran conflict
   { id:1,  name:"Australia",     date:"2026-03-08", flag:"🇦🇺" },
   { id:2,  name:"China",         date:"2026-03-15", flag:"🇨🇳" },
   { id:3,  name:"Japan",         date:"2026-03-29", flag:"🇯🇵" },
-  { id:4,  name:"Bahrain",       date:"2026-04-12", flag:"🇧🇭" },
-  { id:5,  name:"Saudi Arabia",  date:"2026-04-19", flag:"🇸🇦" },
+  { id:4,  name:"Bahrain",       date:"2026-04-12", flag:"🇧🇭", cancelled:true },
+  { id:5,  name:"Saudi Arabia",  date:"2026-04-19", flag:"🇸🇦", cancelled:true },
   { id:6,  name:"Miami",         date:"2026-05-03", flag:"🇺🇸" },
   { id:7,  name:"Canada",        date:"2026-05-24", flag:"🇨🇦" },
   { id:8,  name:"Monaco",        date:"2026-06-07", flag:"🇲🇨" },
@@ -162,7 +162,7 @@ function isRaceLocked(race) {
 }
 
 function getNextRace() {
-  return RACES.find(r => !isRaceLocked(r)) || null;
+  return RACES.find(r => !r.cancelled && !isRaceLocked(r)) || null;
 }
 
 // ─── FIREBASE ────────────────────────────────────────────────────────────────
@@ -346,7 +346,11 @@ select,input{font-family:'Barlow',sans-serif}
 .rc-done{font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:0.1em;color:#e10600;text-transform:uppercase;margin-top:6px}
 .rc-locked{font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:0.08em;color:#cc8800;text-transform:uppercase;margin-top:6px}
 
-.result-panel{background:#0d0d0d;border:1px solid #1a1a1a;border-radius:10px;padding:24px;animation:fd 0.18s ease}
+.rc.cancelled{opacity:0.45;cursor:default;border-color:#111}
+.rc.cancelled:hover{background:#0d0d0d;border-color:#111;transform:none}
+.rc-cancelled{font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:0.12em;color:#cc2200;text-transform:uppercase;margin-top:6px;font-weight:700}
+
+background:#0d0d0d;border:1px solid #1a1a1a;border-radius:10px;padding:24px;animation:fd 0.18s ease}
 .rp-title{font-family:'Bebas Neue',sans-serif;font-size:40px;color:#fff;margin-bottom:8px}
 .rp-f1-link{display:inline-flex;align-items:center;gap:6px;font-family:'Barlow Condensed',sans-serif;font-size:13px;color:#e10600;letter-spacing:0.1em;text-decoration:none;text-transform:uppercase;margin-bottom:20px;border:1px solid #2a0600;border-radius:4px;padding:6px 14px;transition:all 0.15s}
 .rp-f1-link:hover{background:#1a0400;border-color:#e10600}
@@ -494,9 +498,9 @@ function Directions({ onBack }) {
           </div>
         </div>
         <div className="dir-card" style={{marginTop:10}}>
-          <div className="dir-card-title">Maximum: 38 pts per race · 912 pts for the season</div>
+          <div className="dir-card-title">Maximum: 38 pts per race · 836 pts for the season</div>
           <div className="dir-card-body" style={{marginTop:6}}>
-            25 (P10) + 10 (DNF1) + 3 (Constructor) = <strong>38 pts</strong> maximum per race across <strong>24 races</strong>.
+            25 (P10) + 10 (DNF1) + 3 (Constructor) = <strong>38 pts</strong> maximum per race across <strong>22 races</strong>.
           </div>
         </div>
       </div>
@@ -537,7 +541,7 @@ function Leaderboard({ standings, allResults, currentPlayer }) {
     <div>
       <div className="sh">
         <span className="sh-title">Standings</span>
-        <span className="sh-meta">Race {completedRaces.length} of 24</span>
+        <span className="sh-meta">Race {completedRaces.length} of 22</span>
       </div>
       <div className="lb-header">
         <span></span><span>Player</span><span style={{textAlign:"right"}}>Points</span>
@@ -653,7 +657,7 @@ function MyPicks({ player, allPicks, allResults, onSave }) {
         <div className="pick-race-banner">
           <div className="prb-eyebrow">Next Race · Deadline {nextRace.date}</div>
           <div className="prb-title">{nextRace.flag} {nextRace.name} Grand Prix</div>
-          <div className="prb-date">Round {nextRace.id} of 24</div>
+          <div className="prb-date">Round {nextRace.id} of 22</div>
         </div>
       )}
 
@@ -662,24 +666,26 @@ function MyPicks({ player, allPicks, allResults, onSave }) {
           const hasResult = !!allResults[r.id];
           const hasPick = !!playerPicks[r.id];
           const locked = isRaceLocked(r);
+          const cancelled = !!r.cancelled;
           return (
             <div
               key={r.id}
-              className={`rc ${hasResult?"done":""} ${editRace===r.id?"active":""} ${hasPick&&!locked?"has-pick":""}`}
-              onClick={() => setEditRace(r.id)}
+              className={`rc ${hasResult?"done":""} ${editRace===r.id&&!cancelled?"active":""} ${hasPick&&!locked&&!cancelled?"has-pick":""} ${cancelled?"cancelled":""}`}
+              onClick={() => { if (!cancelled) setEditRace(r.id); }}
             >
               <div className="rc-num">{String(r.id).padStart(2,"0")}</div>
               <div className="rc-flag">{r.flag}</div>
               <div className="rc-name">{r.name}</div>
               <div className="rc-date">{r.date}</div>
-              {hasResult && <div className="rc-done">Results in</div>}
-              {locked && !hasResult && <div className="rc-locked">🔒 Locked</div>}
+              {cancelled && <div className="rc-cancelled">⛔ Cancelled</div>}
+              {!cancelled && hasResult && <div className="rc-done">Results in</div>}
+              {!cancelled && locked && !hasResult && <div className="rc-locked">🔒 Locked</div>}
             </div>
           );
         })}
       </div>
 
-      {editableRace && (
+      {editRace && !RACES.find(r => r.id === editRace)?.cancelled && (
         <div style={{animation:"fd 0.2s ease"}}>
           {raceIsLocked ? (
             <div className="pick-form">
@@ -760,6 +766,7 @@ function PreRacePicks({ allPicks, allResults, currentPlayer, players }) {
   // Show all races that have at least one pick submitted, or are the next upcoming race
   const nextRace = getNextRace();
   const visibleRaces = RACES.filter(r => {
+    if (r.cancelled) return false;
     const hasAnyPick = roster.some(p => allPicks[p]?.[r.id]);
     return hasAnyPick || r.id === nextRace?.id;
   });
@@ -879,14 +886,15 @@ function RaceResultsView({ allPicks, allResults, currentPlayer, standings }) {
         {RACES.map(r => (
           <div
             key={r.id}
-            className={`rc ${allResults[r.id]?"done":""} ${selectedRace===r.id?"active":""}`}
-            onClick={() => setSelectedRace(r.id)}
+            className={`rc ${allResults[r.id]?"done":""} ${selectedRace===r.id&&!r.cancelled?"active":""} ${r.cancelled?"cancelled":""}`}
+            onClick={() => { if (!r.cancelled) setSelectedRace(r.id); }}
           >
             <div className="rc-num">{String(r.id).padStart(2,"0")}</div>
             <div className="rc-flag">{r.flag}</div>
             <div className="rc-name">{r.name}</div>
             <div className="rc-date">{r.date}</div>
-            {allResults[r.id] && <div className="rc-done">Completed</div>}
+            {r.cancelled && <div className="rc-cancelled">⛔ Cancelled</div>}
+            {!r.cancelled && allResults[r.id] && <div className="rc-done">Completed</div>}
           </div>
         ))}
       </div>
@@ -1163,7 +1171,7 @@ function CommissionerStandings({ standings, allResults }) {
     <div>
       <div style={{display:"flex",alignItems:"baseline",gap:12,marginBottom:14}}>
         <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:700,letterSpacing:"0.08em",color:"#fff",textTransform:"uppercase"}}>Season Standings</span>
-        <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:13,color:"#666",letterSpacing:"0.1em",textTransform:"uppercase"}}>{completedCount} of 24 races complete</span>
+        <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:13,color:"#666",letterSpacing:"0.1em",textTransform:"uppercase"}}>{completedCount} of 22 races complete</span>
       </div>
       <div style={{background:"#0a0a0a",border:"1px solid #1a1a1a",borderRadius:10,padding:"14px 20px"}}>
         <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:10,letterSpacing:"0.2em",color:"#444",textTransform:"uppercase",display:"grid",gridTemplateColumns:"36px 1fr 70px 70px",gap:8,paddingBottom:8,borderBottom:"1px solid #111",marginBottom:2}}>
@@ -1360,12 +1368,20 @@ function AdminPanel({ allResults, onSaveResults, standings, allPicks, onSavePick
       <div className="admin-grid">
         <div className="admin-race-list">
           {RACES.map(r => (
-            <div key={r.id} className={`admin-race-item ${selectedRace===r.id?"active":""}`} onClick={() => setSelectedRace(r.id)}>
+            <div
+              key={r.id}
+              className={`admin-race-item ${selectedRace===r.id&&!r.cancelled?"active":""}`}
+              onClick={() => { if (!r.cancelled) setSelectedRace(r.id); }}
+              style={r.cancelled ? {opacity:0.4, cursor:"default"} : {}}
+            >
               <div style={{display:"flex",alignItems:"center"}}>
                 <span className="ari-num">{r.id}</span>
                 <span className="ari-name">{r.flag} {r.name}</span>
               </div>
-              {allResults[r.id] && <span className="ari-done"/>}
+              {r.cancelled
+                ? <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:10,color:"#cc2200",letterSpacing:"0.1em"}}>CANCELLED</span>
+                : allResults[r.id] && <span className="ari-done"/>
+              }
             </div>
           ))}
         </div>
@@ -1463,7 +1479,7 @@ function Home({ onPlayer, onAdmin, onDirections, config }) {
         <span className="red">Constructors</span>
         <span className="challenge">Challenge</span>
       </div>
-      <div className="home-sub">15 Players · 24 Races · 3 Picks Per Race</div>
+      <div className="home-sub">15 Players · 22 Races · 3 Picks Per Race</div>
       <div className="home-cards">
         <div className="home-card" onClick={() => setShowPlayerModal(true)}>
           <div className="home-card-icon">🏎️</div>
