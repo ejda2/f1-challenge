@@ -458,7 +458,7 @@ function Directions({ onBack }) {
         <div className="dir-section-title">The Basics</div>
         <div className="dir-card">
           <div className="dir-card-body">
-            Before each race, every player submits <strong>3 picks</strong>: a P10 driver, a DNF1 driver, and a top constructor. Picks lock automatically when race day arrives and cannot be changed after that. After the race, the commissioner enters the results and scores update instantly for everyone.
+            Before each race, every player submits <strong>3 picks</strong>: a P10 driver, a DNF1 driver, and a top constructor. Picks lock the moment the commissioner enters results — you can still update picks on race day right up until that point. After the race, the commissioner enters the results and scores update instantly for everyone.
           </div>
         </div>
       </div>
@@ -512,7 +512,7 @@ function Directions({ onBack }) {
         <div className="dir-card">
           <div className="dir-card-title">Submitting Picks</div>
           <div className="dir-card-body" style={{marginTop:6}}>
-            Tap <strong>I'm a Player</strong>, choose your name, then go to <strong>My Picks</strong>. Select a race, fill in all three picks, and hit Submit. You can update picks any time before the race starts — once the race date arrives they lock permanently.
+            Tap <strong>I'm a Player</strong>, choose your name, then go to <strong>My Picks</strong>. Select a race, fill in all three picks, and hit Submit. You can update picks any time — even on race day — until the commissioner enters results for that race.
           </div>
         </div>
         <div className="dir-card" style={{marginTop:10}}>
@@ -645,7 +645,8 @@ function MyPicks({ player, allPicks, allResults, onSave }) {
   };
 
   const editableRace = editRace ? RACES.find(r => r.id === editRace) : null;
-  const raceIsLocked = editableRace ? isRaceLocked(editableRace) : false;
+  // Picks lock only when the commissioner has entered results — not at midnight on race day
+  const raceIsLocked = editRace ? !!allResults[editRace] : false;
   const existingPick = editRace ? playerPicks[editRace] : null;
 
   return (
@@ -657,7 +658,7 @@ function MyPicks({ player, allPicks, allResults, onSave }) {
 
       {nextRace && (
         <div className="pick-race-banner">
-          <div className="prb-eyebrow">Next Race · Deadline {nextRace.date}</div>
+          <div className="prb-eyebrow">Next Race · {nextRace.date} · Picks close when results are entered</div>
           <div className="prb-title">{nextRace.flag} {nextRace.name} Grand Prix</div>
           <div className="prb-date">Round {nextRace.id} of 22</div>
         </div>
@@ -681,7 +682,7 @@ function MyPicks({ player, allPicks, allResults, onSave }) {
               <div className="rc-date">{r.date}</div>
               {cancelled && <div className="rc-cancelled">⛔ Cancelled</div>}
               {!cancelled && hasResult && <div className="rc-done">Results in</div>}
-              {!cancelled && locked && !hasResult && <div className="rc-locked">🔒 Locked</div>}
+              {!cancelled && !hasResult && locked && <div className="rc-locked" style={{color:"#4cff91"}}>✓ Still Open</div>}
             </div>
           );
         })}
@@ -695,8 +696,8 @@ function MyPicks({ player, allPicks, allResults, onSave }) {
                 <span style={{fontSize:20}}>🔒</span>
                 <span className="locked-banner-text">
                   {existingPick
-                    ? `${editableRace.name} has started — picks are locked and cannot be changed.`
-                    : `${editableRace.name} has started — picks are closed. No pick was submitted for this race.`
+                    ? `Results have been entered for ${editableRace.name} — picks are now locked.`
+                    : `Results have been entered for ${editableRace.name} — picks are closed. No pick was submitted for this race.`
                   }
                 </span>
               </div>
@@ -1401,7 +1402,7 @@ function AdminPanel({ allResults, onSaveResults, standings, allPicks, onSavePick
               const available = DRIVERS.filter(d => d === driver || !order.slice(0, order.length).filter((_, idx) => idx !== i).includes(d));
               return (
                 <div key={i} style={{display:"flex",alignItems:"center",gap:8,background:"#141414",border:"1px solid #1a1a1a",borderRadius:5,padding:"6px 10px"}}>
-                  <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:16,color:"#444",width:24,flexShrink:0}}>{i+1}</span>
+                  <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:16,color:"#ccc",fontWeight:600,width:24,flexShrink:0}}>{i+1}</span>
                   <select
                     value={driver}
                     onChange={e => {
@@ -1435,7 +1436,7 @@ function AdminPanel({ allResults, onSaveResults, standings, allPicks, onSavePick
             {conOrder.map((team, i) => (
               <div key={team} className="con-preview-row">
                 <div style={{display:"flex",alignItems:"center",gap:10}}>
-                  <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:16,color:"#444",width:24}}>{i+1}</span>
+                  <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:16,color:"#ccc",fontWeight:600,width:24}}>{i+1}</span>
                   <ConBadge team={team}/>
                 </div>
                 <span className="con-preview-pts">{teamPts[team]}pts</span>
