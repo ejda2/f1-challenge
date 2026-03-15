@@ -60,6 +60,8 @@ function calcConstructorOrder(finishing_order) {
 }
 
 const CANCELLED_RACES = [4, 5]; // Bahrain and Saudi Arabia — cancelled due to Iran conflict
+
+const RACES = [
   { id:1,  name:"Australia",     date:"2026-03-08", flag:"🇦🇺" },
   { id:2,  name:"China",         date:"2026-03-15", flag:"🇨🇳" },
   { id:3,  name:"Japan",         date:"2026-03-29", flag:"🇯🇵" },
