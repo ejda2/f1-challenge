@@ -947,8 +947,12 @@ function RaceResultsView({ allPicks, allResults, currentPlayer, standings }) {
                       const d = s.raceTotals[selectedRace];
                       const pos = result.finishing_order.indexOf(d.p10) + 1;
                       const isMe = s.player === currentPlayer;
+                      const isPerfect = d.total === 38;
+                      const rowBg = isPerfect
+                        ? "rgba(225,6,0,0.08)"
+                        : isMe ? "rgba(225,6,0,0.04)" : {};
                       return (
-                        <tr key={s.player} style={isMe ? {background:"rgba(225,6,0,0.04)"} : {}}>
+                        <tr key={s.player} style={{background: rowBg}}>
                           <td style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:18,color:"#444"}}>{i+1}</td>
                           <td style={{color:isMe?"#fff":"#bbb",fontWeight:isMe?600:400}}>
                             {s.player}{isMe && <span className="you" style={{marginLeft:6}}>YOU</span>}
@@ -966,7 +970,10 @@ function RaceResultsView({ allPicks, allResults, currentPlayer, standings }) {
                             <ConBadge team={d.constructor}/>
                             {d.conpts > 0 && <span className="badge hit" style={{marginLeft:4}}>+{d.conpts}</span>}
                           </td>
-                          <td style={{textAlign:"right",fontFamily:"'Bebas Neue',sans-serif",fontSize:22,color:"#fff"}}>{d.total}</td>
+                          <td style={{textAlign:"right"}}>
+                            <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,color:isPerfect?"#e10600":"#fff"}}>{d.total}</span>
+                            {isPerfect && <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:10,color:"#e10600",letterSpacing:"0.15em",textTransform:"uppercase"}}>Perfect</div>}
+                          </td>
                         </tr>
                       );
                     })}
@@ -1394,7 +1401,7 @@ function AdminPanel({ allResults, onSaveResults, standings, allPicks, onSavePick
 
           <div className="admin-section-title">
             Finishing Order (P1 → P22)
-            <span className="reset-link" onClick={() => setOrder([...DRIVERS])}>Reset</span>
+            <span className="reset-link" onClick={() => setOrder([...DRIVERS])}>Reset Order</span>
           </div>
 
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:12}}>
