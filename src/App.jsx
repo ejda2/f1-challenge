@@ -356,15 +356,15 @@ background:#0d0d0d;border:1px solid #1a1a1a;border-radius:10px;padding:24px;anim
 .rp-title{font-family:'Bebas Neue',sans-serif;font-size:40px;color:#fff;margin-bottom:8px}
 .rp-f1-link{display:inline-flex;align-items:center;gap:6px;font-family:'Barlow Condensed',sans-serif;font-size:13px;color:#e10600;letter-spacing:0.1em;text-decoration:none;text-transform:uppercase;margin-bottom:20px;border:1px solid #2a0600;border-radius:4px;padding:6px 14px;transition:all 0.15s}
 .rp-f1-link:hover{background:#1a0400;border-color:#e10600}
-.result-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:24px}
+.result-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px}
 @media(max-width:500px){.result-stats{grid-template-columns:1fr}}
-.rs-box{background:#141414;border:1px solid #1e1e1e;border-radius:7px;padding:14px}
+.rs-box{background:#141414;border:1px solid #1e1e1e;border-radius:7px;padding:10px 12px}
 .rs-label{font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:0.2em;color:#777;text-transform:uppercase;margin-bottom:8px}
 .rs-val{font-family:'Bebas Neue',sans-serif;font-size:30px;color:#e10600;line-height:1}
 .rs-sub{font-size:13px;color:#666;margin-top:4px;font-family:'Barlow Condensed',sans-serif}
 .results-table{width:100%;border-collapse:collapse;font-size:14px}
-.results-table th{text-align:left;font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:0.15em;color:#555;text-transform:uppercase;padding:8px 10px;border-bottom:1px solid #111}
-.results-table td{padding:10px 10px;border-bottom:1px solid #0d0d0d;color:#bbb}
+.results-table th{text-align:left;font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:0.15em;color:#555;text-transform:uppercase;padding:6px 8px;border-bottom:1px solid #111}
+.results-table td{padding:7px 8px;border-bottom:1px solid #0d0d0d;color:#bbb;font-size:13px}
 .results-table tr:last-child td{border-bottom:none}
 .results-table tr:hover td{background:#0a0a0a}
 
@@ -953,26 +953,26 @@ function RaceResultsView({ allPicks, allResults, currentPlayer, standings }) {
                         : isMe ? "rgba(225,6,0,0.04)" : {};
                       return (
                         <tr key={s.player} style={{background: rowBg}}>
-                          <td style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:18,color:"#444"}}>{i+1}</td>
-                          <td style={{color:isMe?"#fff":"#bbb",fontWeight:isMe?600:400}}>
+                          <td style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:16,color:"#444"}}>{i+1}</td>
+                          <td style={{color:isMe?"#fff":"#bbb",fontWeight:isMe?600:400,fontSize:13}}>
                             {s.player}{isMe && <span className="you" style={{marginLeft:6}}>YOU</span>}
                           </td>
                           <td>
-                            <span style={{color:d.p10pts>0?"#4cff91":"#bbb"}}>{d.p10}</span>
-                            <span className={ptsBadgeClass(d.p10pts)} style={{marginLeft:6}}>{d.p10pts}pt</span>
-                            <div style={{fontSize:11,color:"#666",fontFamily:"'Barlow Condensed',sans-serif"}}>P{pos}</div>
+                            <span style={{color:d.p10pts>0?"#4cff91":"#bbb",fontSize:13}}>{d.p10}</span>
+                            <span className={ptsBadgeClass(d.p10pts)} style={{marginLeft:4,fontSize:10}}>{d.p10pts}pt</span>
+                            <div style={{fontSize:10,color:"#666",fontFamily:"'Barlow Condensed',sans-serif"}}>P{pos}</div>
                           </td>
                           <td>
-                            <span style={{color:d.dnfpts>0?"#4cff91":"#bbb"}}>{d.dnf1}</span>
-                            {d.dnfpts > 0 && <span className="badge hit" style={{marginLeft:6}}>+10</span>}
+                            <span style={{color:d.dnfpts>0?"#4cff91":"#bbb",fontSize:13}}>{d.dnf1}</span>
+                            {d.dnfpts > 0 && <span className="badge hit" style={{marginLeft:4,fontSize:10}}>+10</span>}
                           </td>
                           <td>
                             <ConBadge team={d.constructor}/>
-                            {d.conpts > 0 && <span className="badge hit" style={{marginLeft:4}}>+{d.conpts}</span>}
+                            {d.conpts > 0 && <span className="badge hit" style={{marginLeft:4,fontSize:10}}>+{d.conpts}</span>}
                           </td>
                           <td style={{textAlign:"right"}}>
-                            <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,color:isPerfect?"#e10600":"#fff"}}>{d.total}</span>
-                            {isPerfect && <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:10,color:"#e10600",letterSpacing:"0.15em",textTransform:"uppercase"}}>Perfect</div>}
+                            <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color:isPerfect?"#e10600":"#fff"}}>{d.total}</span>
+                            {isPerfect && <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:9,color:"#e10600",letterSpacing:"0.15em",textTransform:"uppercase"}}>Perfect</div>}
                           </td>
                         </tr>
                       );
