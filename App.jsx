@@ -1569,8 +1569,20 @@ export default function App() {
       resultsLoaded = true; checkDone();
     });
     const unsubConfig = onSnapshot(doc(db, "data", "config"), snap => {
-      if (snap.exists()) setConfig(snap.data());
-      else fbSaveConfig(DEFAULT_CONFIG);
+      if (snap.exists()) {
+        const stored = snap.data();
+        // Merge any new players from the PLAYERS constant that aren't in the stored list
+        const storedPlayers = stored.players || [];
+        const merged = [
+          ...storedPlayers,
+          ...PLAYERS.filter(p => !storedPlayers.includes(p)),
+        ];
+        const updated = { ...stored, players: merged };
+        if (merged.length !== storedPlayers.length) fbSaveConfig(updated);
+        setConfig(updated);
+      } else {
+        fbSaveConfig(DEFAULT_CONFIG);
+      }
       configLoaded = true; checkDone();
     });
     return () => { unsubPicks(); unsubResults(); unsubConfig(); };
