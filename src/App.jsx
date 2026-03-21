@@ -363,8 +363,8 @@ background:#0d0d0d;border:1px solid #1a1a1a;border-radius:10px;padding:24px;anim
 .rs-val{font-family:'Bebas Neue',sans-serif;font-size:30px;color:#e10600;line-height:1}
 .rs-sub{font-size:13px;color:#666;margin-top:4px;font-family:'Barlow Condensed',sans-serif}
 .results-table{width:100%;border-collapse:collapse;font-size:14px}
-.results-table th{text-align:left;font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:0.15em;color:#555;text-transform:uppercase;padding:6px 8px;border-bottom:1px solid #111}
-.results-table td{padding:7px 8px;border-bottom:1px solid #0d0d0d;color:#bbb;font-size:13px}
+.results-table th{text-align:left;font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:0.15em;color:#555;text-transform:uppercase;padding:5px 6px;border-bottom:1px solid #111}
+.results-table td{padding:5px 6px;border-bottom:1px solid #0d0d0d;color:#bbb;font-size:13px}
 .results-table tr:last-child td{border-bottom:none}
 .results-table tr:hover td{background:#0a0a0a}
 
@@ -958,9 +958,11 @@ function RaceResultsView({ allPicks, allResults, currentPlayer, standings }) {
                             {s.player}{isMe && <span className="you" style={{marginLeft:6}}>YOU</span>}
                           </td>
                           <td>
-                            <span style={{color:d.p10pts>0?"#4cff91":"#bbb",fontSize:13}}>{d.p10}</span>
-                            <span className={ptsBadgeClass(d.p10pts)} style={{marginLeft:4,fontSize:10}}>{d.p10pts}pt</span>
-                            <div style={{fontSize:10,color:"#666",fontFamily:"'Barlow Condensed',sans-serif"}}>P{pos}</div>
+                            <div style={{display:"flex",alignItems:"center",gap:5}}>
+                              <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,color:"#555",minWidth:24}}>P{pos}</span>
+                              <span style={{color:d.p10pts>0?"#4cff91":"#bbb",fontSize:13}}>{d.p10}</span>
+                              <span className={ptsBadgeClass(d.p10pts)} style={{fontSize:10}}>{d.p10pts}pt</span>
+                            </div>
                           </td>
                           <td>
                             <span style={{color:d.dnfpts>0?"#4cff91":"#bbb",fontSize:13}}>{d.dnf1}</span>
