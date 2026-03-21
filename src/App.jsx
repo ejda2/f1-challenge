@@ -7,10 +7,10 @@ import { doc, setDoc, onSnapshot } from "firebase/firestore";
 const ADMIN_PASSWORD = "f1admin2026";
 
 const PLAYERS = [
-  "Andy Jurasek","Brett Sprinkel","Claire Deakin","Greg Angelo",
-  "Jason Hoey","Jim Deakin","Joe Deakin","Joe Jurasek",
-  "Joel Greenfield","Katie Logue","Rick Pflasterer","Sam Levine",
-  "Ted Deakin","Vic Woods","Will Deakin",
+  "Andy Jurasek","Brett Sprinkel","Claire Deakin","Dan Bidinger",
+  "Greg Angelo","Jason Hoey","Jay Miller","Jim Deakin",
+  "Joe Deakin","Joe Jurasek","Joel Greenfield","Katie Logue",
+  "Rick Pflasterer","Sam Levine","Ted Deakin","Vic Woods","Will Deakin",
 ];
 
 const DRIVERS = [
@@ -1020,7 +1020,7 @@ function CommissionerGuide({ onBack }) {
         <div className="dir-section-title">Season Standings</div>
         <div className="dir-card">
           <div className="dir-card-body">
-            Shows the full 15-player leaderboard in a compact, screenshot-friendly format. Designed to fit on one screen so you can send it to the group after each race. Rank, player name, total points, and races played are all visible at a glance.
+            Shows the full 17-player leaderboard in a compact, screenshot-friendly format. Designed to fit on one screen so you can send it to the group after each race. Rank, player name, total points, and races played are all visible at a glance.
           </div>
         </div>
       </div>
@@ -1038,7 +1038,7 @@ function CommissionerGuide({ onBack }) {
         <div className="dir-section-title">Settings</div>
         <div className="dir-card">
           <div className="dir-card-body">
-            Manage the league roster and commissioner password. You can add players up to the 15-player maximum. Removing a player will hide them from the standings and pick screens — their historical data is preserved in the database but will not display. The password change takes effect immediately on all devices.
+            Manage the league roster and commissioner password. You can add players up to the 17-player maximum. Removing a player will hide them from the standings and pick screens — their historical data is preserved in the database but will not display. The password change takes effect immediately on all devices.
           </div>
         </div>
       </div>
@@ -1058,7 +1058,7 @@ function CommissionerSettings({ config, onSaveConfig }) {
   const handleAddPlayer = () => {
     const name = newPlayer.trim();
     if (!name) return;
-    if (players.length >= 15) return;
+    if (players.length >= 17) return;
     if (players.map(p => p.toLowerCase()).includes(name.toLowerCase())) return;
     setPlayers(prev => [...prev, name]);
     setNewPlayer("");
@@ -1095,7 +1095,7 @@ function CommissionerSettings({ config, onSaveConfig }) {
       <div style={{background:"#0d0d0d",border:"1px solid #1a1a1a",borderRadius:10,padding:24,marginBottom:20}}>
         <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:13,letterSpacing:"0.18em",color:"#999",textTransform:"uppercase",marginBottom:16,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <span>Player Roster</span>
-          <span style={{color: players.length >= 15 ? "#e10600" : "#555"}}>{players.length} / 15</span>
+          <span style={{color: players.length >= 17 ? "#e10600" : "#555"}}>{players.length} / 17</span>
         </div>
 
         <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:16}}>
@@ -1130,9 +1130,9 @@ function CommissionerSettings({ config, onSaveConfig }) {
             >Add Player</button>
           </div>
         )}
-        {players.length >= 15 && (
+        {players.length >= 17 && (
           <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:13,color:"#e10600",letterSpacing:"0.05em",marginBottom:16}}>
-            Maximum of 15 players reached.
+            Maximum of 17 players reached.
           </div>
         )}
 
@@ -1489,7 +1489,7 @@ function Home({ onPlayer, onAdmin, onDirections, config }) {
         <span className="red">Constructors</span>
         <span className="challenge">Challenge</span>
       </div>
-      <div className="home-sub">15 Players · 22 Races · 3 Picks Per Race</div>
+      <div className="home-sub">17 Players · 22 Races · 3 Picks Per Race</div>
       <div className="home-cards">
         <div className="home-card" onClick={() => setShowPlayerModal(true)}>
           <div className="home-card-icon">🏎️</div>
@@ -1569,8 +1569,20 @@ export default function App() {
       resultsLoaded = true; checkDone();
     });
     const unsubConfig = onSnapshot(doc(db, "data", "config"), snap => {
-      if (snap.exists()) setConfig(snap.data());
-      else fbSaveConfig(DEFAULT_CONFIG);
+      if (snap.exists()) {
+        const stored = snap.data();
+        // Merge any new players from the PLAYERS constant that aren't in the stored list
+        const storedPlayers = stored.players || [];
+        const merged = [
+          ...storedPlayers,
+          ...PLAYERS.filter(p => !storedPlayers.includes(p)),
+        ];
+        const updated = { ...stored, players: merged };
+        if (merged.length !== storedPlayers.length) fbSaveConfig(updated);
+        setConfig(updated);
+      } else {
+        fbSaveConfig(DEFAULT_CONFIG);
+      }
       configLoaded = true; checkDone();
     });
     return () => { unsubPicks(); unsubResults(); unsubConfig(); };
