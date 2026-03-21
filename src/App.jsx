@@ -274,22 +274,22 @@ select,input{font-family:'Barlow',sans-serif}
 
 .lb-header{display:grid;grid-template-columns:44px 1fr auto;padding:6px 14px;margin-bottom:4px}
 .lb-header span{font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:0.15em;color:#444;text-transform:uppercase}
-.lb-row{display:grid;grid-template-columns:44px 1fr auto;align-items:center;padding:14px 14px;border-radius:7px;margin-bottom:3px;cursor:pointer;transition:background 0.15s;border:1px solid transparent}
+.lb-row{display:grid;grid-template-columns:44px 1fr auto;align-items:center;padding:8px 14px;border-radius:7px;margin-bottom:2px;cursor:pointer;transition:background 0.15s;border:1px solid transparent}
 .lb-row:hover{background:#0e0e0e;border-color:#1a1a1a}
 .lb-row.me{border-color:#e1060030;background:#0e0e0e}
 .lb-row.p1{background:linear-gradient(90deg,rgba(255,215,0,0.06),transparent)}
 .lb-row.p2{background:linear-gradient(90deg,rgba(192,192,192,0.05),transparent)}
 .lb-row.p3{background:linear-gradient(90deg,rgba(205,127,50,0.05),transparent)}
-.lb-rank{font-family:'Bebas Neue',sans-serif;font-size:26px;color:#333}
+.lb-rank{font-family:'Bebas Neue',sans-serif;font-size:20px;color:#333}
 .lb-row.p1 .lb-rank{color:#FFD700}
 .lb-row.p2 .lb-rank{color:#C0C0C0}
 .lb-row.p3 .lb-rank{color:#CD7F32}
 .lb-name{font-size:15px;font-weight:500;color:#ddd}
 .lb-name .you{font-size:11px;background:#e10600;color:#fff;border-radius:3px;padding:1px 6px;margin-left:6px;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.05em;vertical-align:middle}
-.lb-bar-wrap{height:2px;background:#161616;border-radius:1px;margin-top:5px;overflow:hidden;max-width:300px}
+.lb-bar-wrap{height:2px;background:#161616;border-radius:1px;margin-top:3px;overflow:hidden;max-width:300px}
 .lb-bar{height:100%;background:linear-gradient(90deg,#e10600,#ff4500);border-radius:1px;transition:width 0.7s ease}
 .lb-pts-col{text-align:right}
-.lb-pts{font-family:'Bebas Neue',sans-serif;font-size:28px;color:#fff;line-height:1}
+.lb-pts{font-family:'Bebas Neue',sans-serif;font-size:24px;color:#fff;line-height:1}
 .lb-pts-label{font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#444;letter-spacing:0.1em}
 
 .drawer{background:#0a0a0a;border:1px solid #161616;border-radius:8px;padding:20px;margin-bottom:4px;animation:fd 0.18s ease}
