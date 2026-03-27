@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { db } from "./firebase.js";
 import { doc, setDoc, onSnapshot } from "firebase/firestore";
 
@@ -173,9 +173,11 @@ async function fbSavePicks(picks) {
   await setDoc(doc(db, "data", "picks"), picks);
 }
 async function fbSaveResults(results) {
+  // Serialize numeric keys to r1, r2 etc. (Firestore doesn't allow numeric keys)
   const serialized = {};
   Object.entries(results).forEach(([k, v]) => { serialized[`r${k}`] = v; });
-  await setDoc(doc(db, "data", "results"), serialized);
+  // merge:true ensures saving one race never deletes another
+  await setDoc(doc(db, "data", "results"), serialized, { merge: true });
 }
 async function fbSaveConfig(config) {
   await setDoc(doc(db, "data", "config"), config);
@@ -1326,7 +1328,7 @@ function AdminPanel({ allResults, onSaveResults, standings, allPicks, onSavePick
       setDnf1("");
     }
     setSaved(false);
-  }, [selectedRace]);
+  }, [selectedRace, allResults]);
 
   const moveDriver = (i, dir) => {
     const arr = [...order];
@@ -1590,6 +1592,10 @@ export default function App() {
     return () => { unsubPicks(); unsubResults(); unsubConfig(); };
   }, []);
 
+  // Keep a ref to allResults so handleSaveResults always has the latest complete data
+  const allResultsRef = useRef(allResults);
+  useEffect(() => { allResultsRef.current = allResults; }, [allResults]);
+
   const handleSavePick = useCallback((player, raceId, pick) => {
     setAllPicks(prev => {
       const updated = { ...prev, [player]: { ...(prev[player]||{}), [raceId]: pick } };
@@ -1599,11 +1605,11 @@ export default function App() {
   }, []);
 
   const handleSaveResults = useCallback((raceId, result) => {
-    setAllResults(prev => {
-      const updated = { ...prev, [raceId]: result };
-      fbSaveResults(updated);
-      return updated;
-    });
+    // Always spread from the ref to guarantee ALL races are included in the save
+    const updated = { ...allResultsRef.current, [raceId]: result };
+    allResultsRef.current = updated;
+    setAllResults(updated);
+    fbSaveResults(updated);
   }, []);
 
   const handleSaveConfig = useCallback((newConfig) => {
