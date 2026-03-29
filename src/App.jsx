@@ -170,7 +170,7 @@ function getNextRace() {
 // ─── FIREBASE ────────────────────────────────────────────────────────────────
 
 async function fbSavePicks(picks) {
-  await setDoc(doc(db, "data", "picks"), picks);
+  await setDoc(doc(db, "data", "picks"), picks, { merge: true });
 }
 async function fbSaveResults(results) {
   // Serialize numeric keys to r1, r2 etc. (Firestore doesn't allow numeric keys)
@@ -1592,20 +1592,25 @@ export default function App() {
     return () => { unsubPicks(); unsubResults(); unsubConfig(); };
   }, []);
 
+  // Keep a ref to allPicks so handleSavePick always has the latest complete data
+  const allPicksRef = useRef(allPicks);
+  useEffect(() => { allPicksRef.current = allPicks; }, [allPicks]);
+
   // Keep a ref to allResults so handleSaveResults always has the latest complete data
   const allResultsRef = useRef(allResults);
   useEffect(() => { allResultsRef.current = allResults; }, [allResults]);
 
   const handleSavePick = useCallback((player, raceId, pick) => {
-    setAllPicks(prev => {
-      const updated = { ...prev, [player]: { ...(prev[player]||{}), [raceId]: pick } };
-      fbSavePicks(updated);
-      return updated;
-    });
+    const updated = {
+      ...allPicksRef.current,
+      [player]: { ...(allPicksRef.current[player] || {}), [raceId]: pick }
+    };
+    allPicksRef.current = updated;
+    setAllPicks(updated);
+    fbSavePicks(updated);
   }, []);
 
   const handleSaveResults = useCallback((raceId, result) => {
-    // Always spread from the ref to guarantee ALL races are included in the save
     const updated = { ...allResultsRef.current, [raceId]: result };
     allResultsRef.current = updated;
     setAllResults(updated);
