@@ -159,6 +159,10 @@ function computeStandings(allPicks, allResults, players) {
   }).sort((a, b) => b.total - a.total || a.player.localeCompare(b.player));
 }
 
+function getRoundNumber(raceId) {
+  return RACES.filter(r => !r.cancelled && r.id <= raceId).length;
+}
+
 function isRaceLocked(race) {
   return new Date() >= new Date(race.date + "T00:00:00");
 }
@@ -662,7 +666,7 @@ function MyPicks({ player, allPicks, allResults, onSave }) {
         <div className="pick-race-banner">
           <div className="prb-eyebrow">Next Race · {nextRace.date} · Picks close when results are entered</div>
           <div className="prb-title">{nextRace.flag} {nextRace.name} Grand Prix</div>
-          <div className="prb-date">Round {nextRace.id} of 22</div>
+          <div className="prb-date">Round {getRoundNumber(nextRace.id)} of 22</div>
         </div>
       )}
 
@@ -727,7 +731,7 @@ function MyPicks({ player, allPicks, allResults, onSave }) {
                 Submit Picks
               </div>
               <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"30px",color:"#fff",marginBottom:20}}>
-                {editableRace.flag} {editableRace.name} Grand Prix · R{editableRace.id}
+                {editableRace.flag} {editableRace.name} Grand Prix · R{getRoundNumber(editableRace.id)}
               </div>
               <div className="form-row">
                 <label className="form-label">P10 Driver <span>*</span> <em>Pick the driver you think finishes 10th</em></label>
@@ -828,7 +832,7 @@ function PreRacePicks({ allPicks, allResults, currentPlayer, players }) {
             <div className="prerace-eyebrow">
               {hasResult ? "Completed Race" : locked ? "Race Locked — Picks Frozen" : "Race Open — Picks Updating Live"}
             </div>
-            <div className="prerace-title">{race.flag} {race.name} Grand Prix · R{race.id}</div>
+            <div className="prerace-title">{race.flag} {race.name} Grand Prix · R{getRoundNumber(race.id)}</div>
             <div className="prerace-sub">{submittedCount} of {roster.length} players submitted picks</div>
           </div>
 
@@ -1268,7 +1272,7 @@ function CommissionerPicks({ allPicks, onSavePick, players }) {
           {existingPick ? "Override Existing Pick" : "Enter Pick"}
         </div>
         <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:26,color:"#fff",marginBottom:16}}>
-          {selectedPlayer} · {race?.flag} {race?.name} · R{race?.id}
+          {selectedPlayer} · {race?.flag} {race?.name} · R{race ? getRoundNumber(race.id) : ""}
         </div>
 
         {existingPick && (
@@ -1401,7 +1405,7 @@ function AdminPanel({ allResults, onSaveResults, standings, allPicks, onSavePick
         </div>
         <div className="admin-form">
           <div className="admin-form-title">{race?.flag} {race?.name}</div>
-          <div className="admin-form-sub">Round {race?.id} · {race?.date} — set driver order, constructor ranking auto-calculates</div>
+          <div className="admin-form-sub">Round {race ? getRoundNumber(race.id) : ""} · {race?.date} — set driver order, constructor ranking auto-calculates</div>
 
           <div className="admin-section-title">
             Finishing Order (P1 → P22)
