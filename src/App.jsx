@@ -1003,22 +1003,55 @@ function RaceResultsView({ allPicks, allResults, currentPlayer, standings }) {
 
 function generateRaceExport({ race, result, standings, allPicks }) {
   const roundNum = getRoundNumber(race.id);
-
-  // Build player race rows sorted by points desc
-  const raceRows = standings
-    .filter(s => s.raceTotals[race.id])
-    .sort((a, b) => b.raceTotals[race.id].total - a.raceTotals[race.id].total);
+  const completedCount = Object.keys(standings[0]?.raceTotals || {}).length;
 
   const p10Driver = result.finishing_order[9];
   const conP1 = result.constructor_order[0];
   const conColor = TEAM_COLORS[conP1] || "#888";
 
+  const raceRows = standings
+    .filter(s => s.raceTotals[race.id])
+    .sort((a, b) => b.raceTotals[race.id].total - a.raceTotals[race.id].total);
+
+  // ── Shared CSS injected into both tabs ──
+  const sharedCSS = `
+    @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400;500&display=swap');
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:#050505;color:#f0ede8;font-family:'Barlow',sans-serif;width:900px;padding:36px 32px 48px;overflow-x:hidden}
+    .eyebrow{font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:0.28em;color:#e10600;text-transform:uppercase;margin-bottom:6px}
+    .gp-title{font-family:'Bebas Neue',sans-serif;font-size:52px;color:#fff;line-height:1;margin-bottom:4px}
+    .gp-sub{font-family:'Barlow Condensed',sans-serif;font-size:13px;color:#555;letter-spacing:0.1em;margin-bottom:28px}
+    .section-title{font-family:'Bebas Neue',sans-serif;font-size:28px;color:#fff;margin-bottom:14px;letter-spacing:0.03em}
+    table{width:100%;border-collapse:collapse}
+    th{font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:0.2em;color:#444;text-transform:uppercase;text-align:left;padding:7px 12px;border-bottom:1px solid #111}
+    td{padding:9px 12px;border-bottom:1px solid #0d0d0d;font-size:13px;vertical-align:middle}
+    tr:last-child td{border-bottom:none}
+    .rank{font-family:'Bebas Neue',sans-serif;font-size:19px;color:#333;width:34px}
+    .player-name{color:#ccc;font-weight:500;font-size:14px;white-space:nowrap}
+    .pts-col{text-align:right}
+    .big-pts{font-family:'Bebas Neue',sans-serif;font-size:24px;color:#fff;line-height:1}
+    .perfect-pts{color:#e10600}
+    .pos-label{font-family:'Barlow Condensed',sans-serif;font-size:10px;color:#444;min-width:26px;display:inline-block}
+    .hit-text{color:#4cff91}
+    .badge{font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:0.05em;padding:2px 7px;border-radius:3px;background:#151515;color:#555;display:inline-block}
+    .badge.hit{background:rgba(76,255,145,0.1);color:#4cff91}
+    .badge.perfect{background:rgba(225,6,0,0.15);color:#ff4444}
+    .con-badge{font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:0.04em;padding:2px 9px;border-radius:3px;display:inline-block;font-weight:600}
+    .table-wrap{background:#0a0a0a;border:1px solid #1a1a1a;border-radius:10px;padding:4px 0}
+    .result-cards{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:28px}
+    .rc{background:#0d0d0d;border:1px solid #1a1a1a;border-radius:10px;padding:16px 18px}
+    .rc-label{font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:0.22em;color:#555;text-transform:uppercase;margin-bottom:4px}
+    .rc-val{font-family:'Bebas Neue',sans-serif;font-size:32px;color:#e10600;line-height:1.1}
+    .rc-sub{font-size:11px;color:#444;font-family:'Barlow Condensed',sans-serif;margin-top:4px;letter-spacing:0.04em}
+    .hint{font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#222;letter-spacing:0.1em;text-align:center;margin-top:32px;text-transform:uppercase}
+  `;
+
+  // ── TAB 1: Race Results ──
   const ptsBadge = (pts, max) => {
     if (pts === max) return `<span class="badge perfect">${pts}pt</span>`;
     if (pts > 0) return `<span class="badge hit">${pts}pt</span>`;
     return `<span class="badge">${pts}pt</span>`;
   };
-
   const conBadge = (team) => {
     const c = TEAM_COLORS[team] || "#888";
     return `<span class="con-badge" style="background:${c}22;color:${c};border:1px solid ${c}44">${team}</span>`;
@@ -1027,126 +1060,85 @@ function generateRaceExport({ race, result, standings, allPicks }) {
   const raceRowsHtml = raceRows.map((s, i) => {
     const d = s.raceTotals[race.id];
     const pos = result.finishing_order.indexOf(d.p10) + 1;
-    return `
-      <tr>
-        <td class="rank">${i + 1}</td>
-        <td class="player-name">${s.player}</td>
-        <td><span class="pos-label">P${pos}</span> <span class="${d.p10pts > 0 ? "hit-text" : ""}">${d.p10}</span> ${ptsBadge(d.p10pts, 25)}</td>
-        <td><span class="${d.dnfpts > 0 ? "hit-text" : ""}">${d.dnf1}</span>${d.dnfpts > 0 ? ' <span class="badge hit">+10</span>' : ""}</td>
-        <td>${conBadge(d.constructor)}${d.conpts > 0 ? ` <span class="badge hit">+${d.conpts}</span>` : ""}</td>
-        <td class="pts-col"><span class="big-pts ${d.total === 38 ? "perfect-pts" : ""}">${d.total}</span></td>
-      </tr>`;
+    return `<tr>
+      <td class="rank">${i + 1}</td>
+      <td class="player-name">${s.player}</td>
+      <td><span class="pos-label">P${pos}</span> <span class="${d.p10pts > 0 ? "hit-text" : ""}">${d.p10}</span> ${ptsBadge(d.p10pts, 25)}</td>
+      <td><span class="${d.dnfpts > 0 ? "hit-text" : ""}">${d.dnf1}</span>${d.dnfpts > 0 ? ' <span class="badge hit">+10</span>' : ""}</td>
+      <td>${conBadge(d.constructor)}${d.conpts > 0 ? ` <span class="badge hit">+${d.conpts}</span>` : ""}</td>
+      <td class="pts-col"><span class="big-pts ${d.total === 38 ? "perfect-pts" : ""}">${d.total}</span></td>
+    </tr>`;
   }).join("");
 
-  const standingsRowsHtml = standings.map((entry, i) => {
-    const rank = i + 1;
-    const rankColor = rank === 1 ? "#FFD700" : rank === 2 ? "#C0C0C0" : rank === 3 ? "#CD7F32" : "#555";
-    const racesPlayed = Object.keys(entry.raceTotals).length;
-    return `
-      <tr>
-        <td class="rank" style="color:${rankColor}">${rank}</td>
-        <td class="player-name">${entry.player}</td>
-        <td class="pts-col"><span class="big-pts">${entry.total}</span></td>
-        <td style="text-align:right;font-family:'Barlow Condensed',sans-serif;font-size:13px;color:#555">${racesPlayed}r</td>
-      </tr>`;
-  }).join("");
-
-  const completedCount = Object.keys(standings[0]?.raceTotals || {}).length;
-
-  const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>${race.name} GP · P10/DNF1/Constructors Challenge 2026</title>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet"/>
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:#050505;color:#f0ede8;font-family:'Barlow',sans-serif;padding:32px 24px 60px;max-width:860px;margin:0 auto}
-h1{font-family:'Bebas Neue',sans-serif;font-size:48px;color:#fff;line-height:1}
-.eyebrow{font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:0.25em;color:#e10600;text-transform:uppercase;margin-bottom:8px}
-.section-title{font-family:'Bebas Neue',sans-serif;font-size:32px;color:#fff;margin:36px 0 16px}
-.result-cards{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:28px}
-.rc{background:#0d0d0d;border:1px solid #1a1a1a;border-radius:10px;padding:16px 18px}
-.rc-label{font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:0.2em;color:#555;text-transform:uppercase;margin-bottom:4px}
-.rc-val{font-family:'Bebas Neue',sans-serif;font-size:30px;color:#e10600;line-height:1.1}
-.rc-sub{font-size:12px;color:#555;font-family:'Barlow Condensed',sans-serif;margin-top:4px;letter-spacing:0.05em}
-table{width:100%;border-collapse:collapse}
-th{font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:0.18em;color:#444;text-transform:uppercase;text-align:left;padding:6px 10px;border-bottom:1px solid #111}
-td{padding:8px 10px;border-bottom:1px solid #0d0d0d;font-size:13px;vertical-align:middle}
-tr:last-child td{border-bottom:none}
-tr:hover td{background:#0d0d0d}
-.rank{font-family:'Bebas Neue',sans-serif;font-size:18px;color:#333;width:32px}
-.player-name{color:#ccc;font-weight:500;font-size:14px}
-.pts-col{text-align:right}
-.big-pts{font-family:'Bebas Neue',sans-serif;font-size:22px;color:#fff;line-height:1}
-.perfect-pts{color:#e10600}
-.pos-label{font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#444;min-width:24px;display:inline-block}
-.hit-text{color:#4cff91}
-.badge{font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:0.05em;padding:2px 7px;border-radius:3px;background:#151515;color:#555;display:inline-block}
-.badge.hit{background:rgba(76,255,145,0.1);color:#4cff91}
-.badge.perfect{background:rgba(225,6,0,0.15);color:#ff4444}
-.con-badge{font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:0.05em;padding:2px 8px;border-radius:3px;display:inline-block;font-weight:600}
-.table-wrap{background:#0a0a0a;border:1px solid #1a1a1a;border-radius:10px;padding:4px 0;margin-bottom:8px}
-.footer{font-family:'Barlow Condensed',sans-serif;font-size:12px;color:#333;letter-spacing:0.1em;text-align:center;margin-top:40px}
-@media print{body{background:#fff;color:#000}th{color:#333}.eyebrow{color:#c00}.big-pts,.rank{color:#000}.rc{border-color:#ddd}.table-wrap{border-color:#ddd}}
-</style>
-</head>
+  const tab1Html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/>
+<title>${race.name} GP · Race Results</title>
+<style>${sharedCSS}</style></head>
 <body>
 <div class="eyebrow">P10 · DNF1 · Constructors Challenge · 2026</div>
-<h1>${race.flag} ${race.name} Grand Prix</h1>
-<div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;color:#555;letter-spacing:0.08em;margin-top:4px;margin-bottom:24px">Round ${roundNum} · ${race.date}</div>
-
+<div class="gp-title">${race.flag} ${race.name} Grand Prix</div>
+<div class="gp-sub">Round ${roundNum} · ${race.date} · Race Results</div>
 <div class="result-cards">
-  <div class="rc">
-    <div class="rc-label">P10 Finisher</div>
-    <div class="rc-val">${p10Driver}</div>
-    <div class="rc-sub">25pts if picked exactly</div>
-  </div>
-  <div class="rc">
-    <div class="rc-label">DNF1</div>
-    <div class="rc-val">${result.dnf1 || "None"}</div>
-    <div class="rc-sub">10pt bonus if picked</div>
-  </div>
-  <div class="rc">
-    <div class="rc-label">Constructor P1</div>
-    <div class="rc-val" style="color:${conColor}">${conP1}</div>
-    <div class="rc-sub">3pts if picked correctly</div>
-  </div>
+  <div class="rc"><div class="rc-label">P10 Finisher</div><div class="rc-val">${p10Driver}</div><div class="rc-sub">25pts if picked exactly</div></div>
+  <div class="rc"><div class="rc-label">DNF1</div><div class="rc-val">${result.dnf1 || "None"}</div><div class="rc-sub">10pt bonus if picked</div></div>
+  <div class="rc"><div class="rc-label">Constructor P1</div><div class="rc-val" style="color:${conColor}">${conP1}</div><div class="rc-sub">3pts if picked correctly</div></div>
 </div>
-
-<div class="section-title">Race Results</div>
+<div class="section-title">All Picks · ${race.name} GP</div>
 <div class="table-wrap">
   <table>
     <thead><tr><th>#</th><th>Player</th><th>P10 Pick</th><th>DNF1</th><th>Constructor</th><th style="text-align:right">Pts</th></tr></thead>
     <tbody>${raceRowsHtml}</tbody>
   </table>
 </div>
+<div class="hint">Screenshot this tab · Cmd+Shift+4 on Mac</div>
+</body></html>`;
 
-<div class="section-title">Season Standings · After Race ${roundNum}</div>
-<div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;color:#555;letter-spacing:0.08em;margin-bottom:12px">${completedCount} of 22 races complete</div>
+  // ── TAB 2: Season Standings ──
+  const standingsRowsHtml = standings.map((entry, i) => {
+    const rank = i + 1;
+    const rankColor = rank === 1 ? "#FFD700" : rank === 2 ? "#C0C0C0" : rank === 3 ? "#CD7F32" : "#555";
+    const racesPlayed = Object.keys(entry.raceTotals).length;
+    const barWidth = Math.round((entry.total / (standings[0]?.total || 1)) * 100);
+    return `<tr>
+      <td class="rank" style="color:${rankColor}">${rank}</td>
+      <td class="player-name">${entry.player}</td>
+      <td style="width:200px">
+        <div style="height:3px;background:#111;border-radius:2px;overflow:hidden;max-width:180px">
+          <div style="height:100%;width:${barWidth}%;background:linear-gradient(90deg,#e10600,#ff4500);border-radius:2px"></div>
+        </div>
+      </td>
+      <td class="pts-col"><span class="big-pts">${entry.total}</span></td>
+      <td style="text-align:right;font-family:'Barlow Condensed',sans-serif;font-size:12px;color:#444;padding-left:0">${racesPlayed}r</td>
+    </tr>`;
+  }).join("");
+
+  const tab2Html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/>
+<title>${race.name} GP · Season Standings</title>
+<style>${sharedCSS}</style></head>
+<body>
+<div class="eyebrow">P10 · DNF1 · Constructors Challenge · 2026</div>
+<div class="gp-title">Season Standings</div>
+<div class="gp-sub">After ${race.flag} ${race.name} · Round ${roundNum} · ${completedCount} of 22 races complete</div>
 <div class="table-wrap">
   <table>
-    <thead><tr><th>#</th><th>Player</th><th style="text-align:right">Points</th><th style="text-align:right">Races</th></tr></thead>
+    <thead><tr><th>#</th><th>Player</th><th></th><th style="text-align:right">Points</th><th style="text-align:right">Races</th></tr></thead>
     <tbody>${standingsRowsHtml}</tbody>
   </table>
 </div>
+<div class="hint">Screenshot this tab · Cmd+Shift+4 on Mac</div>
+</body></html>`;
 
-<div class="footer">Generated ${new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})} · P10/DNF1/Constructors Challenge 2026</div>
-</body>
-</html>`;
+  // ── Open both tabs ──
+  const openTab = (html) => {
+    const blob = new Blob([html], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const w = window.open(url, "_blank");
+    // Clean up blob URL after tab loads
+    if (w) w.addEventListener("load", () => URL.revokeObjectURL(url), { once: true });
+  };
 
-  // Build file name: e.g. Miami_GP_Results.html
-  const safeName = race.name.replace(/\s+/g, "_");
-  const fileName = `${safeName}_GP_Results.html`;
-
-  const blob = new Blob([html], { type: "text/html" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = fileName;
-  a.click();
-  URL.revokeObjectURL(url);
+  openTab(tab1Html);
+  // Small delay so browsers don't block both as pop-ups
+  setTimeout(() => openTab(tab2Html), 300);
 }
 
 // ─── ADMIN PANEL ─────────────────────────────────────────────────────────────
