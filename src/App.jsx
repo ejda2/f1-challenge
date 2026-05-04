@@ -1127,18 +1127,22 @@ function generateRaceExport({ race, result, standings, allPicks }) {
 <div class="hint">Screenshot this tab · Cmd+Shift+4 on Mac</div>
 </body></html>`;
 
-  // ── Open both tabs ──
-  const openTab = (html) => {
+  // ── Download both HTML files ──
+  const safeName = race.name.replace(/\s+/g, "_");
+
+  const downloadHtml = (html, fileName) => {
     const blob = new Blob([html], { type: "text/html" });
     const url = URL.createObjectURL(blob);
-    const w = window.open(url, "_blank");
-    // Clean up blob URL after tab loads
-    if (w) w.addEventListener("load", () => URL.revokeObjectURL(url), { once: true });
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
-  openTab(tab1Html);
-  // Small delay so browsers don't block both as pop-ups
-  setTimeout(() => openTab(tab2Html), 300);
+  downloadHtml(tab1Html, `${safeName}_GP_Results.html`);
+  // Small delay so browser doesn't merge both into one download prompt
+  setTimeout(() => downloadHtml(tab2Html, `${safeName}_GP_Standings.html`), 400);
 }
 
 // ─── ADMIN PANEL ─────────────────────────────────────────────────────────────
