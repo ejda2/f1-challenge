@@ -17,12 +17,12 @@ const DRIVERS = [
   "Albon","Alonso","Antonelli","Bearman","Bortoleto","Bottas",
   "Colapinto","Gasly","Hadjar","Hamilton","Hulkenberg","Lawson",
   "Leclerc","Lindblad","Norris","Ocon","Perez","Piastri",
-  "Russell","Sainz","Stroll","Verstappen",
+  "Russell","Sainz","Stroll","Verstappen","Myles Garrett","Shedeur Sanders",
 ];
 
 const CONSTRUCTORS = [
   "Alpine","Aston Martin","Audi","Cadillac","Ferrari",
-  "Haas","McLaren","Mercedes","Racing Bulls","Red Bull","Williams",
+  "Haas","McLaren","Mercedes","Racing Bulls","Red Bull","Williams","Cleveland Browns",
 ];
 
 const DRIVER_CONSTRUCTOR = {
@@ -37,6 +37,7 @@ const DRIVER_CONSTRUCTOR = {
   Albon:"Williams",      Sainz:"Williams",
   Perez:"Cadillac",      Bottas:"Cadillac",
   Stroll:"Aston Martin", Alonso:"Aston Martin",
+  "Myles Garrett":"Cleveland Browns", "Shedeur Sanders":"Cleveland Browns",
 };
 
 const F1_PTS = [25,18,15,12,10,8,6,4,2,1];
