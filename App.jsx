@@ -17,12 +17,12 @@ const DRIVERS = [
   "Albon","Alonso","Antonelli","Bearman","Bortoleto","Bottas",
   "Colapinto","Gasly","Hadjar","Hamilton","Hulkenberg","Lawson",
   "Leclerc","Lindblad","Norris","Ocon","Perez","Piastri",
-  "Russell","Sainz","Stroll","Verstappen","Myles Garrett","Shedeur Sanders",
+  "Russell","Sainz","Stroll","Verstappen",
 ];
 
 const CONSTRUCTORS = [
   "Alpine","Aston Martin","Audi","Cadillac","Ferrari",
-  "Haas","McLaren","Mercedes","Racing Bulls","Red Bull","Williams","Cleveland Browns",
+  "Haas","McLaren","Mercedes","Racing Bulls","Red Bull","Williams",
 ];
 
 const DRIVER_CONSTRUCTOR = {
