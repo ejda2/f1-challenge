@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { db } from "./firebase.js";
 import { doc, setDoc, onSnapshot } from "firebase/firestore";
 
@@ -7,10 +7,10 @@ import { doc, setDoc, onSnapshot } from "firebase/firestore";
 const ADMIN_PASSWORD = "f1admin2026";
 
 const PLAYERS = [
-  "Andy Jurasek","Brett Sprinkel","Claire Deakin","Dan Bidinger",
-  "Greg Angelo","Jason Hoey","Jay Miller","Jim Deakin",
-  "Joe Deakin","Joe Jurasek","Joel Greenfield","Katie Logue",
-  "Rick Pflasterer","Sam Levine","Ted Deakin","Vic Woods","Will Deakin",
+  "Andy Jurasek","Brett Sprinkel","Claire Deakin","Greg Angelo",
+  "Jason Hoey","Jim Deakin","Joe Deakin","Joe Jurasek",
+  "Joel Greenfield","Katie Logue","Rick Pflasterer","Sam Levine",
+  "Ted Deakin","Vic Woods","Will Deakin",
 ];
 
 const DRIVERS = [
@@ -41,6 +41,10 @@ const DRIVER_CONSTRUCTOR = {
 
 const F1_PTS = [25,18,15,12,10,8,6,4,2,1];
 
+const TRIFECTA_EXACT_PTS = 20;
+const TRIFECTA_BOXED_PTS = 8;
+const TRIFECTA_START_RACE_ID = 14; // Netherlands — first race after the Hungary summer break
+
 const F1_RESULTS_URL = "https://www.formula1.com/en/results/2026/races";
 
 function calcConstructorOrder(finishing_order) {
@@ -59,14 +63,12 @@ function calcConstructorOrder(finishing_order) {
   });
 }
 
-const CANCELLED_RACES = [4, 5]; // Bahrain and Saudi Arabia — cancelled due to Iran conflict
-
 const RACES = [
   { id:1,  name:"Australia",     date:"2026-03-08", flag:"🇦🇺" },
   { id:2,  name:"China",         date:"2026-03-15", flag:"🇨🇳" },
   { id:3,  name:"Japan",         date:"2026-03-29", flag:"🇯🇵" },
-  { id:4,  name:"Bahrain",       date:"2026-04-12", flag:"🇧🇭", cancelled:true },
-  { id:5,  name:"Saudi Arabia",  date:"2026-04-19", flag:"🇸🇦", cancelled:true },
+  { id:4,  name:"Bahrain",       date:"2026-04-12", flag:"🇧🇭" },
+  { id:5,  name:"Saudi Arabia",  date:"2026-04-19", flag:"🇸🇦" },
   { id:6,  name:"Miami",         date:"2026-05-03", flag:"🇺🇸" },
   { id:7,  name:"Canada",        date:"2026-05-24", flag:"🇨🇦" },
   { id:8,  name:"Monaco",        date:"2026-06-07", flag:"🇲🇨" },
@@ -138,10 +140,18 @@ function scoreCon(team, constructor_order) {
   const pos = constructor_order.indexOf(team);
   return [3,2,1][pos] ?? 0;
 }
+function scoreTrifecta(trifecta, finishing_order) {
+  if (!trifecta || !trifecta.p1 || !trifecta.p2 || !trifecta.p3) return 0;
+  const picks = [trifecta.p1, trifecta.p2, trifecta.p3];
+  if (new Set(picks).size !== 3) return 0; // guard against duplicate driver picks
+  const top3 = finishing_order.slice(0, 3);
+  if (picks[0] === top3[0] && picks[1] === top3[1] && picks[2] === top3[2]) return TRIFECTA_EXACT_PTS;
+  const boxed = picks.every(d => top3.includes(d));
+  return boxed ? TRIFECTA_BOXED_PTS : 0;
+}
 
-function computeStandings(allPicks, allResults, players) {
-  const roster = players || PLAYERS;
-  return roster.map(player => {
+function computeStandings(allPicks, allResults) {
+  return PLAYERS.map(player => {
     let total = 0;
     const raceTotals = {};
     const playerPicks = allPicks[player] || {};
@@ -151,16 +161,13 @@ function computeStandings(allPicks, allResults, players) {
       const p10pts = scoreP10(pick.p10, result.finishing_order);
       const dnfpts = scoreDNF(pick.dnf1, result.dnf1);
       const conpts = scoreCon(pick.constructor, result.constructor_order);
-      const raceTotal = p10pts + dnfpts + conpts;
-      raceTotals[Number(raceId)] = { ...pick, p10pts, dnfpts, conpts, total: raceTotal };
+      const trifectapts = scoreTrifecta(pick.trifecta, result.finishing_order);
+      const raceTotal = p10pts + dnfpts + conpts + trifectapts;
+      raceTotals[Number(raceId)] = { ...pick, p10pts, dnfpts, conpts, trifectapts, total: raceTotal };
       total += raceTotal;
     });
     return { player, total, raceTotals };
   }).sort((a, b) => b.total - a.total || a.player.localeCompare(b.player));
-}
-
-function getRoundNumber(raceId) {
-  return RACES.filter(r => !r.cancelled && r.id <= raceId).length;
 }
 
 function isRaceLocked(race) {
@@ -168,29 +175,19 @@ function isRaceLocked(race) {
 }
 
 function getNextRace() {
-  return RACES.find(r => !r.cancelled && !isRaceLocked(r)) || null;
+  return RACES.find(r => !isRaceLocked(r)) || null;
 }
 
 // ─── FIREBASE ────────────────────────────────────────────────────────────────
 
 async function fbSavePicks(picks) {
-  await setDoc(doc(db, "data", "picks"), picks, { merge: true });
+  await setDoc(doc(db, "data", "picks"), picks);
 }
 async function fbSaveResults(results) {
-  // Serialize numeric keys to r1, r2 etc. (Firestore doesn't allow numeric keys)
   const serialized = {};
   Object.entries(results).forEach(([k, v]) => { serialized[`r${k}`] = v; });
-  // merge:true ensures saving one race never deletes another
-  await setDoc(doc(db, "data", "results"), serialized, { merge: true });
+  await setDoc(doc(db, "data", "results"), serialized);
 }
-async function fbSaveConfig(config) {
-  await setDoc(doc(db, "data", "config"), config);
-}
-
-const DEFAULT_CONFIG = {
-  password: "f1admin2026",
-  players: [...PLAYERS],
-};
 
 // ─── STYLES ──────────────────────────────────────────────────────────────────
 
@@ -280,22 +277,22 @@ select,input{font-family:'Barlow',sans-serif}
 
 .lb-header{display:grid;grid-template-columns:44px 1fr auto;padding:6px 14px;margin-bottom:4px}
 .lb-header span{font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:0.15em;color:#444;text-transform:uppercase}
-.lb-row{display:grid;grid-template-columns:44px 1fr auto;align-items:center;padding:8px 14px;border-radius:7px;margin-bottom:2px;cursor:pointer;transition:background 0.15s;border:1px solid transparent}
+.lb-row{display:grid;grid-template-columns:44px 1fr auto;align-items:center;padding:14px 14px;border-radius:7px;margin-bottom:3px;cursor:pointer;transition:background 0.15s;border:1px solid transparent}
 .lb-row:hover{background:#0e0e0e;border-color:#1a1a1a}
 .lb-row.me{border-color:#e1060030;background:#0e0e0e}
 .lb-row.p1{background:linear-gradient(90deg,rgba(255,215,0,0.06),transparent)}
 .lb-row.p2{background:linear-gradient(90deg,rgba(192,192,192,0.05),transparent)}
 .lb-row.p3{background:linear-gradient(90deg,rgba(205,127,50,0.05),transparent)}
-.lb-rank{font-family:'Bebas Neue',sans-serif;font-size:20px;color:#333}
+.lb-rank{font-family:'Bebas Neue',sans-serif;font-size:26px;color:#333}
 .lb-row.p1 .lb-rank{color:#FFD700}
 .lb-row.p2 .lb-rank{color:#C0C0C0}
 .lb-row.p3 .lb-rank{color:#CD7F32}
 .lb-name{font-size:15px;font-weight:500;color:#ddd}
 .lb-name .you{font-size:11px;background:#e10600;color:#fff;border-radius:3px;padding:1px 6px;margin-left:6px;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.05em;vertical-align:middle}
-.lb-bar-wrap{height:2px;background:#161616;border-radius:1px;margin-top:3px;overflow:hidden;max-width:300px}
+.lb-bar-wrap{height:2px;background:#161616;border-radius:1px;margin-top:5px;overflow:hidden;max-width:300px}
 .lb-bar{height:100%;background:linear-gradient(90deg,#e10600,#ff4500);border-radius:1px;transition:width 0.7s ease}
 .lb-pts-col{text-align:right}
-.lb-pts{font-family:'Bebas Neue',sans-serif;font-size:24px;color:#fff;line-height:1}
+.lb-pts{font-family:'Bebas Neue',sans-serif;font-size:28px;color:#fff;line-height:1}
 .lb-pts-label{font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#444;letter-spacing:0.1em}
 
 .drawer{background:#0a0a0a;border:1px solid #161616;border-radius:8px;padding:20px;margin-bottom:4px;animation:fd 0.18s ease}
@@ -354,23 +351,19 @@ select,input{font-family:'Barlow',sans-serif}
 .rc-done{font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:0.1em;color:#e10600;text-transform:uppercase;margin-top:6px}
 .rc-locked{font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:0.08em;color:#cc8800;text-transform:uppercase;margin-top:6px}
 
-.rc.cancelled{opacity:0.45;cursor:default;border-color:#111}
-.rc.cancelled:hover{background:#0d0d0d;border-color:#111;transform:none}
-.rc-cancelled{font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:0.12em;color:#cc2200;text-transform:uppercase;margin-top:6px;font-weight:700}
-
-background:#0d0d0d;border:1px solid #1a1a1a;border-radius:10px;padding:24px;animation:fd 0.18s ease}
+.result-panel{background:#0d0d0d;border:1px solid #1a1a1a;border-radius:10px;padding:24px;animation:fd 0.18s ease}
 .rp-title{font-family:'Bebas Neue',sans-serif;font-size:40px;color:#fff;margin-bottom:8px}
 .rp-f1-link{display:inline-flex;align-items:center;gap:6px;font-family:'Barlow Condensed',sans-serif;font-size:13px;color:#e10600;letter-spacing:0.1em;text-decoration:none;text-transform:uppercase;margin-bottom:20px;border:1px solid #2a0600;border-radius:4px;padding:6px 14px;transition:all 0.15s}
 .rp-f1-link:hover{background:#1a0400;border-color:#e10600}
-.result-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px}
+.result-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:24px}
 @media(max-width:500px){.result-stats{grid-template-columns:1fr}}
-.rs-box{background:#141414;border:1px solid #1e1e1e;border-radius:7px;padding:10px 12px}
+.rs-box{background:#141414;border:1px solid #1e1e1e;border-radius:7px;padding:14px}
 .rs-label{font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:0.2em;color:#777;text-transform:uppercase;margin-bottom:8px}
 .rs-val{font-family:'Bebas Neue',sans-serif;font-size:30px;color:#e10600;line-height:1}
 .rs-sub{font-size:13px;color:#666;margin-top:4px;font-family:'Barlow Condensed',sans-serif}
 .results-table{width:100%;border-collapse:collapse;font-size:14px}
-.results-table th{text-align:left;font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:0.15em;color:#555;text-transform:uppercase;padding:5px 6px;border-bottom:1px solid #111}
-.results-table td{padding:5px 6px;border-bottom:1px solid #0d0d0d;color:#bbb;font-size:13px}
+.results-table th{text-align:left;font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:0.15em;color:#555;text-transform:uppercase;padding:8px 10px;border-bottom:1px solid #111}
+.results-table td{padding:10px 10px;border-bottom:1px solid #0d0d0d;color:#bbb}
 .results-table tr:last-child td{border-bottom:none}
 .results-table tr:hover td{background:#0a0a0a}
 
@@ -464,7 +457,7 @@ function Directions({ onBack }) {
         <div className="dir-section-title">The Basics</div>
         <div className="dir-card">
           <div className="dir-card-body">
-            Before each race, every player submits <strong>3 picks</strong>: a P10 driver, a DNF1 driver, and a top constructor. Picks lock the moment the commissioner enters results — you can still update picks on race day right up until that point. After the race, the commissioner enters the results and scores update instantly for everyone.
+            Before each race, every player submits <strong>3 picks</strong>: a P10 driver, a DNF1 driver, and a top constructor. Picks lock automatically when race day arrives and cannot be changed after that. After the race, the commissioner enters the results and scores update instantly for everyone.
           </div>
         </div>
       </div>
@@ -506,9 +499,15 @@ function Directions({ onBack }) {
           </div>
         </div>
         <div className="dir-card" style={{marginTop:10}}>
-          <div className="dir-card-title">Maximum: 38 pts per race · 836 pts for the season</div>
+          <div className="dir-card-title">Bonus Pick — The Trifecta (optional, up to {TRIFECTA_EXACT_PTS} pts)</div>
           <div className="dir-card-body" style={{marginTop:6}}>
-            25 (P10) + 10 (DNF1) + 3 (Constructor) = <strong>38 pts</strong> maximum per race across <strong>22 races</strong>.
+            Starting after the summer break, you can also predict the top 3 finishers: P1, P2, and P3. Get all three right in exact order for <strong>{TRIFECTA_EXACT_PTS} points</strong>. Get the right three drivers in any order (a "boxed" Trifecta) for <strong>{TRIFECTA_BOXED_PTS} points</strong>. This pick is completely optional. Skip it and your other three picks score as normal.
+          </div>
+        </div>
+        <div className="dir-card" style={{marginTop:10}}>
+          <div className="dir-card-title">Maximum: 58 pts per race with the Trifecta</div>
+          <div className="dir-card-body" style={{marginTop:6}}>
+            25 (P10) + 10 (DNF1) + 3 (Constructor) + {TRIFECTA_EXACT_PTS} (Trifecta) = <strong>58 pts</strong> maximum per race in weeks the Trifecta is live.
           </div>
         </div>
       </div>
@@ -518,7 +517,7 @@ function Directions({ onBack }) {
         <div className="dir-card">
           <div className="dir-card-title">Submitting Picks</div>
           <div className="dir-card-body" style={{marginTop:6}}>
-            Tap <strong>I'm a Player</strong>, choose your name, then go to <strong>My Picks</strong>. Select a race, fill in all three picks, and hit Submit. You can update picks any time — even on race day — until the commissioner enters results for that race.
+            Tap <strong>I'm a Player</strong>, choose your name, then go to <strong>My Picks</strong>. Select a race, fill in all three picks, and hit Submit. You can update picks any time before the race starts — once the race date arrives they lock permanently.
           </div>
         </div>
         <div className="dir-card" style={{marginTop:10}}>
@@ -549,7 +548,7 @@ function Leaderboard({ standings, allResults, currentPlayer }) {
     <div>
       <div className="sh">
         <span className="sh-title">Standings</span>
-        <span className="sh-meta">Race {completedRaces.length} of 22</span>
+        <span className="sh-meta">Race {completedRaces.length} of 24</span>
       </div>
       <div className="lb-header">
         <span></span><span>Player</span><span style={{textAlign:"right"}}>Points</span>
@@ -595,22 +594,32 @@ function Leaderboard({ standings, allResults, currentPlayer }) {
                   );
                   const p10pos = res.finishing_order.indexOf(d.p10) + 1;
                   return (
-                    <div className="race-picks-row" key={raceId}>
-                      <span className="rpr-race">{race?.flag} {race?.name}</span>
-                      <span>
-                        <span className={`rpr-val ${d.p10pts>0?"correct":""}`}>{d.p10}</span>
-                        <span className={ptsBadgeClass(d.p10pts)} style={{marginLeft:6}}>{d.p10pts}pt</span>
-                        <div style={{fontSize:11,color:"#666",fontFamily:"'Barlow Condensed',sans-serif",marginTop:2}}>Finished P{p10pos}</div>
-                      </span>
-                      <span>
-                        <span className={`rpr-val ${d.dnfpts>0?"correct":""}`}>{d.dnf1}</span>
-                        {d.dnfpts > 0 && <span className="badge hit" style={{marginLeft:6}}>+10</span>}
-                      </span>
-                      <span>
-                        <ConBadge team={d.constructor}/>
-                        {d.conpts > 0 && <span className="badge hit" style={{marginLeft:4}}>+{d.conpts}</span>}
-                      </span>
-                      <span className={`rpr-pts ${d.total===0?"zero":""}`}>{d.total}</span>
+                    <div key={raceId}>
+                      <div className="race-picks-row">
+                        <span className="rpr-race">{race?.flag} {race?.name}</span>
+                        <span>
+                          <span className={`rpr-val ${d.p10pts>0?"correct":""}`}>{d.p10}</span>
+                          <span className={ptsBadgeClass(d.p10pts)} style={{marginLeft:6}}>{d.p10pts}pt</span>
+                          <div style={{fontSize:11,color:"#666",fontFamily:"'Barlow Condensed',sans-serif",marginTop:2}}>Finished P{p10pos}</div>
+                        </span>
+                        <span>
+                          <span className={`rpr-val ${d.dnfpts>0?"correct":""}`}>{d.dnf1}</span>
+                          {d.dnfpts > 0 && <span className="badge hit" style={{marginLeft:6}}>+10</span>}
+                        </span>
+                        <span>
+                          <ConBadge team={d.constructor}/>
+                          {d.conpts > 0 && <span className="badge hit" style={{marginLeft:4}}>+{d.conpts}</span>}
+                        </span>
+                        <span className={`rpr-pts ${d.total===0?"zero":""}`}>{d.total}</span>
+                      </div>
+                      {d.trifecta && (
+                        <div style={{fontSize:12,color:"#888",padding:"2px 0 8px",fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:"0.05em"}}>
+                          🏆 Trifecta: {d.trifecta.p1} · {d.trifecta.p2} · {d.trifecta.p3}
+                          {d.trifectapts > 0
+                            ? <span className="badge hit" style={{marginLeft:8}}>+{d.trifectapts}</span>
+                            : <span style={{marginLeft:8,color:"#555"}}>+0</span>}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -632,27 +641,41 @@ function MyPicks({ player, allPicks, allResults, onSave }) {
   const playerPicks = allPicks[player] || {};
   const nextRace = getNextRace();
   const [editRace, setEditRace] = useState(nextRace?.id || null);
-  const [form, setForm] = useState({ p10: "", dnf1: "", constructor: "" });
+  const [form, setForm] = useState({ p10: "", dnf1: "", constructor: "", trifecta: { p1: "", p2: "", p3: "" } });
   const [saved, setSaved] = useState(false);
+  const [trifectaErr, setTrifectaErr] = useState(false);
 
   useEffect(() => {
     if (editRace) {
       const existing = playerPicks[editRace] || {};
-      setForm({ p10: existing.p10 || "", dnf1: existing.dnf1 || "", constructor: existing.constructor || "" });
+      setForm({
+        p10: existing.p10 || "",
+        dnf1: existing.dnf1 || "",
+        constructor: existing.constructor || "",
+        trifecta: existing.trifecta || { p1: "", p2: "", p3: "" },
+      });
       setSaved(false);
+      setTrifectaErr(false);
     }
   }, [editRace, player]);
 
+  const trifectaTouched = form.trifecta.p1 || form.trifecta.p2 || form.trifecta.p3;
+  const trifectaComplete = form.trifecta.p1 && form.trifecta.p2 && form.trifecta.p3;
+  const trifectaDupes = trifectaComplete && new Set([form.trifecta.p1, form.trifecta.p2, form.trifecta.p3]).size !== 3;
+
   const handleSave = () => {
     if (!form.p10 || !form.dnf1 || !form.constructor) return;
-    onSave(player, editRace, form);
+    if (trifectaTouched && (!trifectaComplete || trifectaDupes)) { setTrifectaErr(true); return; }
+    setTrifectaErr(false);
+    const pick = { p10: form.p10, dnf1: form.dnf1, constructor: form.constructor };
+    pick.trifecta = trifectaComplete && !trifectaDupes ? form.trifecta : null;
+    onSave(player, editRace, pick);
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   };
 
   const editableRace = editRace ? RACES.find(r => r.id === editRace) : null;
-  // Picks lock only when the commissioner has entered results — not at midnight on race day
-  const raceIsLocked = editRace ? !!allResults[editRace] : false;
+  const raceIsLocked = editableRace ? isRaceLocked(editableRace) : false;
   const existingPick = editRace ? playerPicks[editRace] : null;
 
   return (
@@ -664,9 +687,9 @@ function MyPicks({ player, allPicks, allResults, onSave }) {
 
       {nextRace && (
         <div className="pick-race-banner">
-          <div className="prb-eyebrow">Next Race · {nextRace.date} · Picks close when results are entered</div>
+          <div className="prb-eyebrow">Next Race · Deadline {nextRace.date}</div>
           <div className="prb-title">{nextRace.flag} {nextRace.name} Grand Prix</div>
-          <div className="prb-date">Round {getRoundNumber(nextRace.id)} of 22</div>
+          <div className="prb-date">Round {nextRace.id} of 24</div>
         </div>
       )}
 
@@ -675,26 +698,24 @@ function MyPicks({ player, allPicks, allResults, onSave }) {
           const hasResult = !!allResults[r.id];
           const hasPick = !!playerPicks[r.id];
           const locked = isRaceLocked(r);
-          const cancelled = !!r.cancelled;
           return (
             <div
               key={r.id}
-              className={`rc ${hasResult?"done":""} ${editRace===r.id&&!cancelled?"active":""} ${hasPick&&!locked&&!cancelled?"has-pick":""} ${cancelled?"cancelled":""}`}
-              onClick={() => { if (!cancelled) setEditRace(r.id); }}
+              className={`rc ${hasResult?"done":""} ${editRace===r.id?"active":""} ${hasPick&&!locked?"has-pick":""}`}
+              onClick={() => setEditRace(r.id)}
             >
               <div className="rc-num">{String(r.id).padStart(2,"0")}</div>
               <div className="rc-flag">{r.flag}</div>
               <div className="rc-name">{r.name}</div>
               <div className="rc-date">{r.date}</div>
-              {cancelled && <div className="rc-cancelled">⛔ Cancelled</div>}
-              {!cancelled && hasResult && <div className="rc-done">Results in</div>}
-              {!cancelled && !hasResult && locked && <div className="rc-locked" style={{color:"#4cff91"}}>✓ Still Open</div>}
+              {hasResult && <div className="rc-done">Results in</div>}
+              {locked && !hasResult && <div className="rc-locked">🔒 Locked</div>}
             </div>
           );
         })}
       </div>
 
-      {editRace && !RACES.find(r => r.id === editRace)?.cancelled && (
+      {editableRace && (
         <div style={{animation:"fd 0.2s ease"}}>
           {raceIsLocked ? (
             <div className="pick-form">
@@ -702,8 +723,8 @@ function MyPicks({ player, allPicks, allResults, onSave }) {
                 <span style={{fontSize:20}}>🔒</span>
                 <span className="locked-banner-text">
                   {existingPick
-                    ? `Results have been entered for ${editableRace.name} — picks are now locked.`
-                    : `Results have been entered for ${editableRace.name} — picks are closed. No pick was submitted for this race.`
+                    ? `${editableRace.name} has started — picks are locked and cannot be changed.`
+                    : `${editableRace.name} has started — picks are closed. No pick was submitted for this race.`
                   }
                 </span>
               </div>
@@ -716,6 +737,9 @@ function MyPicks({ player, allPicks, allResults, onSave }) {
                     {label:"P10 Driver",   val: existingPick.p10},
                     {label:"DNF1 Driver",  val: existingPick.dnf1},
                     {label:"Constructor",  val: existingPick.constructor},
+                    ...(existingPick.trifecta
+                      ? [{label:"Trifecta", val: `${existingPick.trifecta.p1} · ${existingPick.trifecta.p2} · ${existingPick.trifecta.p3}`}]
+                      : []),
                   ].map(item => (
                     <div className="locked-pick-row" key={item.label}>
                       <span className="locked-pick-label">{item.label}</span>
@@ -731,7 +755,7 @@ function MyPicks({ player, allPicks, allResults, onSave }) {
                 Submit Picks
               </div>
               <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"30px",color:"#fff",marginBottom:20}}>
-                {editableRace.flag} {editableRace.name} Grand Prix · R{getRoundNumber(editableRace.id)}
+                {editableRace.flag} {editableRace.name} Grand Prix · R{editableRace.id}
               </div>
               <div className="form-row">
                 <label className="form-label">P10 Driver <span>*</span> <em>Pick the driver you think finishes 10th</em></label>
@@ -754,6 +778,44 @@ function MyPicks({ player, allPicks, allResults, onSave }) {
                   {CONSTRUCTORS.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
+              {editableRace.id >= TRIFECTA_START_RACE_ID && (
+              <div style={{borderTop:"1px solid #1a1a1a",margin:"22px 0 18px",paddingTop:18}}>
+                <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:12,letterSpacing:"0.2em",color:"#e10600",textTransform:"uppercase",marginBottom:4}}>
+                  Bonus · Optional
+                </div>
+                <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"24px",color:"#fff",marginBottom:8}}>
+                  🏆 The Trifecta
+                </div>
+                <div style={{fontSize:13,color:"#888",marginBottom:16}}>
+                  Predict the top 3 finishers. Exact order pays {TRIFECTA_EXACT_PTS} pts. Right three drivers, any order, pays {TRIFECTA_BOXED_PTS} pts. Leave blank to skip.
+                </div>
+                <div className="form-row">
+                  <label className="form-label">P1</label>
+                  <select className="form-select" value={form.trifecta.p1} onChange={e => setForm(f => ({...f, trifecta: {...f.trifecta, p1: e.target.value}}))}>
+                    <option value="">Select a driver...</option>
+                    {DRIVERS.map(d => <option key={d} value={d}>{d}</option>)}
+                  </select>
+                </div>
+                <div className="form-row">
+                  <label className="form-label">P2</label>
+                  <select className="form-select" value={form.trifecta.p2} onChange={e => setForm(f => ({...f, trifecta: {...f.trifecta, p2: e.target.value}}))}>
+                    <option value="">Select a driver...</option>
+                    {DRIVERS.map(d => <option key={d} value={d}>{d}</option>)}
+                  </select>
+                </div>
+                <div className="form-row">
+                  <label className="form-label">P3</label>
+                  <select className="form-select" value={form.trifecta.p3} onChange={e => setForm(f => ({...f, trifecta: {...f.trifecta, p3: e.target.value}}))}>
+                    <option value="">Select a driver...</option>
+                    {DRIVERS.map(d => <option key={d} value={d}>{d}</option>)}
+                  </select>
+                </div>
+                {trifectaErr && (
+                  <div className="input-error">Fill in all three Trifecta picks with different drivers, or leave all three blank.</div>
+                )}
+              </div>
+              )}
+
               <div className="form-save-row">
                 <button className="save-btn" onClick={handleSave} disabled={!form.p10 || !form.dnf1 || !form.constructor}>
                   {existingPick ? "Update Picks" : "Submit Picks"}
@@ -770,13 +832,11 @@ function MyPicks({ player, allPicks, allResults, onSave }) {
 
 // ─── PRE-RACE PICKS ───────────────────────────────────────────────────────────
 
-function PreRacePicks({ allPicks, allResults, currentPlayer, players }) {
-  const roster = players || PLAYERS;
+function PreRacePicks({ allPicks, allResults, currentPlayer }) {
   // Show all races that have at least one pick submitted, or are the next upcoming race
   const nextRace = getNextRace();
   const visibleRaces = RACES.filter(r => {
-    if (r.cancelled) return false;
-    const hasAnyPick = roster.some(p => allPicks[p]?.[r.id]);
+    const hasAnyPick = PLAYERS.some(p => allPicks[p]?.[r.id]);
     return hasAnyPick || r.id === nextRace?.id;
   });
 
@@ -798,7 +858,7 @@ function PreRacePicks({ allPicks, allResults, currentPlayer, players }) {
     );
   }
 
-  const submittedCount = roster.filter(p => allPicks[p]?.[selectedRace]).length;
+  const submittedCount = PLAYERS.filter(p => allPicks[p]?.[selectedRace]).length;
 
   return (
     <div>
@@ -809,7 +869,7 @@ function PreRacePicks({ allPicks, allResults, currentPlayer, players }) {
 
       <div className="prerace-race-grid">
         {visibleRaces.map(r => {
-          const count = roster.filter(p => allPicks[p]?.[r.id]).length;
+          const count = PLAYERS.filter(p => allPicks[p]?.[r.id]).length;
           const isLocked = isRaceLocked(r);
           return (
             <div
@@ -819,7 +879,7 @@ function PreRacePicks({ allPicks, allResults, currentPlayer, players }) {
             >
               <div className="prerace-rc-name">{r.flag} {r.name}</div>
               <div className="prerace-rc-date">{r.date}</div>
-              <div className="prerace-rc-count">{count}/{roster.length} submitted</div>
+              <div className="prerace-rc-count">{count}/{PLAYERS.length} submitted</div>
               {!isLocked && <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:10,color:"#4cff91",letterSpacing:"0.08em",marginTop:2}}>OPEN</div>}
             </div>
           );
@@ -832,8 +892,8 @@ function PreRacePicks({ allPicks, allResults, currentPlayer, players }) {
             <div className="prerace-eyebrow">
               {hasResult ? "Completed Race" : locked ? "Race Locked — Picks Frozen" : "Race Open — Picks Updating Live"}
             </div>
-            <div className="prerace-title">{race.flag} {race.name} Grand Prix · R{getRoundNumber(race.id)}</div>
-            <div className="prerace-sub">{submittedCount} of {roster.length} players submitted picks</div>
+            <div className="prerace-title">{race.flag} {race.name} Grand Prix · R{race.id}</div>
+            <div className="prerace-sub">{submittedCount} of {PLAYERS.length} players submitted picks</div>
           </div>
 
           <table className="prerace-table">
@@ -843,10 +903,11 @@ function PreRacePicks({ allPicks, allResults, currentPlayer, players }) {
                 <th>P10 Pick</th>
                 <th>DNF1</th>
                 <th>Constructor</th>
+                <th>Trifecta</th>
               </tr>
             </thead>
             <tbody>
-              {roster.map(player => {
+              {PLAYERS.map(player => {
                 const pick = allPicks[player]?.[selectedRace];
                 const isMe = player === currentPlayer;
                 return (
@@ -860,9 +921,12 @@ function PreRacePicks({ allPicks, allResults, currentPlayer, players }) {
                         <td>{pick.p10}</td>
                         <td>{pick.dnf1}</td>
                         <td><ConBadge team={pick.constructor}/></td>
+                        <td style={{fontSize:12,color:"#888"}}>
+                          {pick.trifecta ? `${pick.trifecta.p1} · ${pick.trifecta.p2} · ${pick.trifecta.p3}` : "—"}
+                        </td>
                       </>
                     ) : (
-                      <td colSpan={3} className="prerace-nopick">No pick submitted</td>
+                      <td colSpan={4} className="prerace-nopick">No pick submitted</td>
                     )}
                   </tr>
                 );
@@ -895,15 +959,14 @@ function RaceResultsView({ allPicks, allResults, currentPlayer, standings }) {
         {RACES.map(r => (
           <div
             key={r.id}
-            className={`rc ${allResults[r.id]?"done":""} ${selectedRace===r.id&&!r.cancelled?"active":""} ${r.cancelled?"cancelled":""}`}
-            onClick={() => { if (!r.cancelled) setSelectedRace(r.id); }}
+            className={`rc ${allResults[r.id]?"done":""} ${selectedRace===r.id?"active":""}`}
+            onClick={() => setSelectedRace(r.id)}
           >
             <div className="rc-num">{String(r.id).padStart(2,"0")}</div>
             <div className="rc-flag">{r.flag}</div>
             <div className="rc-name">{r.name}</div>
             <div className="rc-date">{r.date}</div>
-            {r.cancelled && <div className="rc-cancelled">⛔ Cancelled</div>}
-            {!r.cancelled && allResults[r.id] && <div className="rc-done">Completed</div>}
+            {allResults[r.id] && <div className="rc-done">Completed</div>}
           </div>
         ))}
       </div>
@@ -934,6 +997,13 @@ function RaceResultsView({ allPicks, allResults, currentPlayer, standings }) {
                   <ConBadge team={result.constructor_order[0]} />
                   <div className="rs-sub" style={{marginTop:6}}>3pts if picked correctly</div>
                 </div>
+                <div className="rs-box">
+                  <div className="rs-label">🏆 Trifecta (P1-P2-P3)</div>
+                  <div className="rs-val" style={{fontSize:16}}>
+                    {result.finishing_order[0]} · {result.finishing_order[1]} · {result.finishing_order[2]}
+                  </div>
+                  <div className="rs-sub">{TRIFECTA_EXACT_PTS}pts exact order · {TRIFECTA_BOXED_PTS}pts boxed</div>
+                </div>
               </div>
               <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,letterSpacing:"0.2em",color:"#555",textTransform:"uppercase",marginBottom:10}}>
                 All Picks This Race
@@ -941,7 +1011,7 @@ function RaceResultsView({ allPicks, allResults, currentPlayer, standings }) {
               <table className="results-table">
                 <thead>
                   <tr>
-                    <th>#</th><th>Player</th><th>P10 Pick</th><th>DNF1</th><th>Constructor</th>
+                    <th>#</th><th>Player</th><th>P10 Pick</th><th>DNF1</th><th>Constructor</th><th>Trifecta</th>
                     <th style={{textAlign:"right"}}>Pts</th>
                   </tr>
                 </thead>
@@ -953,35 +1023,30 @@ function RaceResultsView({ allPicks, allResults, currentPlayer, standings }) {
                       const d = s.raceTotals[selectedRace];
                       const pos = result.finishing_order.indexOf(d.p10) + 1;
                       const isMe = s.player === currentPlayer;
-                      const isPerfect = d.total === 38;
-                      const rowBg = isPerfect
-                        ? "rgba(225,6,0,0.08)"
-                        : isMe ? "rgba(225,6,0,0.04)" : {};
                       return (
-                        <tr key={s.player} style={{background: rowBg}}>
-                          <td style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:16,color:"#444"}}>{i+1}</td>
-                          <td style={{color:isMe?"#fff":"#bbb",fontWeight:isMe?600:400,fontSize:13}}>
+                        <tr key={s.player} style={isMe ? {background:"rgba(225,6,0,0.04)"} : {}}>
+                          <td style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:18,color:"#444"}}>{i+1}</td>
+                          <td style={{color:isMe?"#fff":"#bbb",fontWeight:isMe?600:400}}>
                             {s.player}{isMe && <span className="you" style={{marginLeft:6}}>YOU</span>}
                           </td>
                           <td>
-                            <div style={{display:"flex",alignItems:"center",gap:5}}>
-                              <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,color:"#555",minWidth:24}}>P{pos}</span>
-                              <span style={{color:d.p10pts>0?"#4cff91":"#bbb",fontSize:13}}>{d.p10}</span>
-                              <span className={ptsBadgeClass(d.p10pts)} style={{fontSize:10}}>{d.p10pts}pt</span>
-                            </div>
+                            <span style={{color:d.p10pts>0?"#4cff91":"#bbb"}}>{d.p10}</span>
+                            <span className={ptsBadgeClass(d.p10pts)} style={{marginLeft:6}}>{d.p10pts}pt</span>
+                            <div style={{fontSize:11,color:"#666",fontFamily:"'Barlow Condensed',sans-serif"}}>P{pos}</div>
                           </td>
                           <td>
-                            <span style={{color:d.dnfpts>0?"#4cff91":"#bbb",fontSize:13}}>{d.dnf1}</span>
-                            {d.dnfpts > 0 && <span className="badge hit" style={{marginLeft:4,fontSize:10}}>+10</span>}
+                            <span style={{color:d.dnfpts>0?"#4cff91":"#bbb"}}>{d.dnf1}</span>
+                            {d.dnfpts > 0 && <span className="badge hit" style={{marginLeft:6}}>+10</span>}
                           </td>
                           <td>
                             <ConBadge team={d.constructor}/>
-                            {d.conpts > 0 && <span className="badge hit" style={{marginLeft:4,fontSize:10}}>+{d.conpts}</span>}
+                            {d.conpts > 0 && <span className="badge hit" style={{marginLeft:4}}>+{d.conpts}</span>}
                           </td>
-                          <td style={{textAlign:"right"}}>
-                            <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color:isPerfect?"#e10600":"#fff"}}>{d.total}</span>
-                            {isPerfect && <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:9,color:"#e10600",letterSpacing:"0.15em",textTransform:"uppercase"}}>Perfect</div>}
+                          <td style={{fontSize:12,color:"#888"}}>
+                            {d.trifecta ? `${d.trifecta.p1} · ${d.trifecta.p2} · ${d.trifecta.p3}` : "—"}
+                            {d.trifectapts > 0 && <span className="badge hit" style={{marginLeft:4}}>+{d.trifectapts}</span>}
                           </td>
+                          <td style={{textAlign:"right",fontFamily:"'Bebas Neue',sans-serif",fontSize:22,color:"#fff"}}>{d.total}</td>
                         </tr>
                       );
                     })}
@@ -999,333 +1064,7 @@ function RaceResultsView({ allPicks, allResults, currentPlayer, standings }) {
   );
 }
 
-// ─── RACE EXPORT ─────────────────────────────────────────────────────────────
-
-function generateRaceExport({ race, result, standings, allPicks }) {
-  const roundNum = getRoundNumber(race.id);
-  const completedCount = Object.keys(standings[0]?.raceTotals || {}).length;
-
-  const p10Driver = result.finishing_order[9];
-  const conP1 = result.constructor_order[0];
-  const conColor = TEAM_COLORS[conP1] || "#888";
-
-  const raceRows = standings
-    .filter(s => s.raceTotals[race.id])
-    .sort((a, b) => b.raceTotals[race.id].total - a.raceTotals[race.id].total);
-
-  // ── Shared CSS injected into both tabs ──
-  const sharedCSS = `
-    @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400;500&display=swap');
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{background:#050505;color:#f0ede8;font-family:'Barlow',sans-serif;width:900px;padding:36px 32px 48px;overflow-x:hidden}
-    .eyebrow{font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:0.28em;color:#e10600;text-transform:uppercase;margin-bottom:6px}
-    .gp-title{font-family:'Bebas Neue',sans-serif;font-size:52px;color:#fff;line-height:1;margin-bottom:4px}
-    .gp-sub{font-family:'Barlow Condensed',sans-serif;font-size:13px;color:#555;letter-spacing:0.1em;margin-bottom:28px}
-    .section-title{font-family:'Bebas Neue',sans-serif;font-size:28px;color:#fff;margin-bottom:14px;letter-spacing:0.03em}
-    table{width:100%;border-collapse:collapse}
-    th{font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:0.2em;color:#444;text-transform:uppercase;text-align:left;padding:7px 12px;border-bottom:1px solid #111}
-    td{padding:9px 12px;border-bottom:1px solid #0d0d0d;font-size:13px;vertical-align:middle}
-    tr:last-child td{border-bottom:none}
-    .rank{font-family:'Bebas Neue',sans-serif;font-size:19px;color:#333;width:34px}
-    .player-name{color:#ccc;font-weight:500;font-size:14px;white-space:nowrap}
-    .pts-col{text-align:right}
-    .big-pts{font-family:'Bebas Neue',sans-serif;font-size:24px;color:#fff;line-height:1}
-    .perfect-pts{color:#e10600}
-    .pos-label{font-family:'Barlow Condensed',sans-serif;font-size:10px;color:#444;min-width:26px;display:inline-block}
-    .hit-text{color:#4cff91}
-    .badge{font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:0.05em;padding:2px 7px;border-radius:3px;background:#151515;color:#555;display:inline-block}
-    .badge.hit{background:rgba(76,255,145,0.1);color:#4cff91}
-    .badge.perfect{background:rgba(225,6,0,0.15);color:#ff4444}
-    .con-badge{font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:0.04em;padding:2px 9px;border-radius:3px;display:inline-block;font-weight:600}
-    .table-wrap{background:#0a0a0a;border:1px solid #1a1a1a;border-radius:10px;padding:4px 0}
-    .result-cards{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:28px}
-    .rc{background:#0d0d0d;border:1px solid #1a1a1a;border-radius:10px;padding:16px 18px}
-    .rc-label{font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:0.22em;color:#555;text-transform:uppercase;margin-bottom:4px}
-    .rc-val{font-family:'Bebas Neue',sans-serif;font-size:32px;color:#e10600;line-height:1.1}
-    .rc-sub{font-size:11px;color:#444;font-family:'Barlow Condensed',sans-serif;margin-top:4px;letter-spacing:0.04em}
-    .hint{font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#222;letter-spacing:0.1em;text-align:center;margin-top:32px;text-transform:uppercase}
-  `;
-
-  // ── TAB 1: Race Results ──
-  const ptsBadge = (pts, max) => {
-    if (pts === max) return `<span class="badge perfect">${pts}pt</span>`;
-    if (pts > 0) return `<span class="badge hit">${pts}pt</span>`;
-    return `<span class="badge">${pts}pt</span>`;
-  };
-  const conBadge = (team) => {
-    const c = TEAM_COLORS[team] || "#888";
-    return `<span class="con-badge" style="background:${c}22;color:${c};border:1px solid ${c}44">${team}</span>`;
-  };
-
-  const raceRowsHtml = raceRows.map((s, i) => {
-    const d = s.raceTotals[race.id];
-    const pos = result.finishing_order.indexOf(d.p10) + 1;
-    return `<tr>
-      <td class="rank">${i + 1}</td>
-      <td class="player-name">${s.player}</td>
-      <td><span class="pos-label">P${pos}</span> <span class="${d.p10pts > 0 ? "hit-text" : ""}">${d.p10}</span> ${ptsBadge(d.p10pts, 25)}</td>
-      <td><span class="${d.dnfpts > 0 ? "hit-text" : ""}">${d.dnf1}</span>${d.dnfpts > 0 ? ' <span class="badge hit">+10</span>' : ""}</td>
-      <td>${conBadge(d.constructor)}${d.conpts > 0 ? ` <span class="badge hit">+${d.conpts}</span>` : ""}</td>
-      <td class="pts-col"><span class="big-pts ${d.total === 38 ? "perfect-pts" : ""}">${d.total}</span></td>
-    </tr>`;
-  }).join("");
-
-  const tab1Html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/>
-<title>${race.name} GP · Race Results</title>
-<style>${sharedCSS}</style></head>
-<body>
-<div class="eyebrow">P10 · DNF1 · Constructors Challenge · 2026</div>
-<div class="gp-title">${race.flag} ${race.name} Grand Prix</div>
-<div class="gp-sub">Round ${roundNum} · ${race.date} · Race Results</div>
-<div class="result-cards">
-  <div class="rc"><div class="rc-label">P10 Finisher</div><div class="rc-val">${p10Driver}</div><div class="rc-sub">25pts if picked exactly</div></div>
-  <div class="rc"><div class="rc-label">DNF1</div><div class="rc-val">${result.dnf1 || "None"}</div><div class="rc-sub">10pt bonus if picked</div></div>
-  <div class="rc"><div class="rc-label">Constructor P1</div><div class="rc-val" style="color:${conColor}">${conP1}</div><div class="rc-sub">3pts if picked correctly</div></div>
-</div>
-<div class="section-title">All Picks · ${race.name} GP</div>
-<div class="table-wrap">
-  <table>
-    <thead><tr><th>#</th><th>Player</th><th>P10 Pick</th><th>DNF1</th><th>Constructor</th><th style="text-align:right">Pts</th></tr></thead>
-    <tbody>${raceRowsHtml}</tbody>
-  </table>
-</div>
-<div class="hint">Screenshot this tab · Cmd+Shift+4 on Mac</div>
-</body></html>`;
-
-  // ── TAB 2: Season Standings ──
-  const standingsRowsHtml = standings.map((entry, i) => {
-    const rank = i + 1;
-    const rankColor = rank === 1 ? "#FFD700" : rank === 2 ? "#C0C0C0" : rank === 3 ? "#CD7F32" : "#555";
-    const racesPlayed = Object.keys(entry.raceTotals).length;
-    const barWidth = Math.round((entry.total / (standings[0]?.total || 1)) * 100);
-    return `<tr>
-      <td class="rank" style="color:${rankColor}">${rank}</td>
-      <td class="player-name">${entry.player}</td>
-      <td style="width:200px">
-        <div style="height:3px;background:#111;border-radius:2px;overflow:hidden;max-width:180px">
-          <div style="height:100%;width:${barWidth}%;background:linear-gradient(90deg,#e10600,#ff4500);border-radius:2px"></div>
-        </div>
-      </td>
-      <td class="pts-col"><span class="big-pts">${entry.total}</span></td>
-      <td style="text-align:right;font-family:'Barlow Condensed',sans-serif;font-size:12px;color:#444;padding-left:0">${racesPlayed}r</td>
-    </tr>`;
-  }).join("");
-
-  const tab2Html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/>
-<title>${race.name} GP · Season Standings</title>
-<style>${sharedCSS}</style></head>
-<body>
-<div class="eyebrow">P10 · DNF1 · Constructors Challenge · 2026</div>
-<div class="gp-title">Season Standings</div>
-<div class="gp-sub">After ${race.flag} ${race.name} · Round ${roundNum} · ${completedCount} of 22 races complete</div>
-<div class="table-wrap">
-  <table>
-    <thead><tr><th>#</th><th>Player</th><th></th><th style="text-align:right">Points</th><th style="text-align:right">Races</th></tr></thead>
-    <tbody>${standingsRowsHtml}</tbody>
-  </table>
-</div>
-<div class="hint">Screenshot this tab · Cmd+Shift+4 on Mac</div>
-</body></html>`;
-
-  // ── Download both HTML files ──
-  const safeName = race.name.replace(/\s+/g, "_");
-
-  const downloadHtml = (html, fileName) => {
-    const blob = new Blob([html], { type: "text/html" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = fileName;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  downloadHtml(tab1Html, `${safeName}_GP_Results.html`);
-  // Small delay so browser doesn't merge both into one download prompt
-  setTimeout(() => downloadHtml(tab2Html, `${safeName}_GP_Standings.html`), 400);
-}
-
 // ─── ADMIN PANEL ─────────────────────────────────────────────────────────────
-
-function CommissionerGuide({ onBack }) {
-  return (
-    <div className="directions">
-      <button className="directions-back" onClick={onBack}>← Back to Commissioner</button>
-      <div className="dir-title">Commissioner Guide</div>
-      <div className="dir-sub">P10 · DNF1 · CONSTRUCTORS CHALLENGE · 2026</div>
-
-      <div className="dir-section">
-        <div className="dir-section-title">Enter Results</div>
-        <div className="dir-card">
-          <div className="dir-card-title">After each race</div>
-          <div className="dir-card-body" style={{marginTop:6}}>
-            Use the <strong>finishing order dropdowns</strong> to set P1 through P22. Selecting a driver in one slot automatically swaps them with their previous position — no duplicates are possible. The constructor standings calculate automatically from the driver order. Set the <strong>DNF1</strong> dropdown to the first driver who retired. Hit <strong>Save Results</strong> to publish scores instantly to all players.
-          </div>
-        </div>
-        <div className="dir-card" style={{marginTop:10}}>
-          <div className="dir-card-title">Correcting a mistake</div>
-          <div className="dir-card-body" style={{marginTop:6}}>
-            You can re-enter and overwrite results for any race at any time. Just select the race from the left sidebar, adjust the order, and save again. Scores recalculate immediately for all players.
-          </div>
-        </div>
-      </div>
-
-      <div className="dir-section">
-        <div className="dir-section-title">Season Standings</div>
-        <div className="dir-card">
-          <div className="dir-card-body">
-            Shows the full 17-player leaderboard in a compact, screenshot-friendly format. Designed to fit on one screen so you can send it to the group after each race. Rank, player name, total points, and races played are all visible at a glance.
-          </div>
-        </div>
-      </div>
-
-      <div className="dir-section">
-        <div className="dir-section-title">Player Picks</div>
-        <div className="dir-card">
-          <div className="dir-card-body">
-            Use this tab when a player forgets to submit their picks before a race starts. Select the player and the race, enter their three picks, and save. You can also use this to correct a pick entered in error. If picks already exist for that player and race, a warning will appear before you overwrite them. Picks entered here are treated identically to player-submitted picks for scoring purposes.
-          </div>
-        </div>
-      </div>
-
-      <div className="dir-section">
-        <div className="dir-section-title">Settings</div>
-        <div className="dir-card">
-          <div className="dir-card-body">
-            Manage the league roster and commissioner password. You can add players up to the 17-player maximum. Removing a player will hide them from the standings and pick screens — their historical data is preserved in the database but will not display. The password change takes effect immediately on all devices.
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function CommissionerSettings({ config, onSaveConfig }) {
-  const [players, setPlayers] = useState([...(config.players || PLAYERS)]);
-  const [newPlayer, setNewPlayer] = useState("");
-  const [newPw, setNewPw] = useState("");
-  const [confirmPw, setConfirmPw] = useState("");
-  const [pwSaved, setPwSaved] = useState(false);
-  const [rosterSaved, setRosterSaved] = useState(false);
-  const [pwErr, setPwErr] = useState("");
-
-  const handleAddPlayer = () => {
-    const name = newPlayer.trim();
-    if (!name) return;
-    if (players.length >= 17) return;
-    if (players.map(p => p.toLowerCase()).includes(name.toLowerCase())) return;
-    setPlayers(prev => [...prev, name]);
-    setNewPlayer("");
-  };
-
-  const handleRemovePlayer = (name) => {
-    setPlayers(prev => prev.filter(p => p !== name));
-  };
-
-  const handleSaveRoster = () => {
-    onSaveConfig({ ...config, players });
-    setRosterSaved(true);
-    setTimeout(() => setRosterSaved(false), 3000);
-  };
-
-  const handleSavePassword = () => {
-    setPwErr("");
-    if (!newPw) { setPwErr("Enter a new password."); return; }
-    if (newPw !== confirmPw) { setPwErr("Passwords do not match."); return; }
-    if (newPw.length < 6) { setPwErr("Password must be at least 6 characters."); return; }
-    onSaveConfig({ ...config, password: newPw });
-    setPwSaved(true);
-    setNewPw("");
-    setConfirmPw("");
-    setTimeout(() => setPwSaved(false), 3000);
-  };
-
-  return (
-    <div>
-      <div style={{display:"flex",alignItems:"baseline",gap:12,marginBottom:24}}>
-        <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:700,letterSpacing:"0.08em",color:"#fff",textTransform:"uppercase"}}>Settings</span>
-      </div>
-
-      <div style={{background:"#0d0d0d",border:"1px solid #1a1a1a",borderRadius:10,padding:24,marginBottom:20}}>
-        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:13,letterSpacing:"0.18em",color:"#999",textTransform:"uppercase",marginBottom:16,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-          <span>Player Roster</span>
-          <span style={{color: players.length >= 17 ? "#e10600" : "#555"}}>{players.length} / 17</span>
-        </div>
-
-        <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:16}}>
-          {players.map(p => (
-            <div key={p} style={{display:"flex",alignItems:"center",justifyContent:"space-between",background:"#141414",border:"1px solid #1e1e1e",borderRadius:6,padding:"9px 14px"}}>
-              <span style={{fontSize:14,color:"#ddd"}}>{p}</span>
-              <button
-                onClick={() => handleRemovePlayer(p)}
-                style={{background:"none",border:"1px solid #2a0a0a",color:"#883333",borderRadius:4,padding:"3px 10px",fontSize:12,fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:"0.08em",transition:"all 0.15s"}}
-                onMouseOver={e => { e.target.style.borderColor="#e10600"; e.target.style.color="#ff4444"; }}
-                onMouseOut={e => { e.target.style.borderColor="#2a0a0a"; e.target.style.color="#883333"; }}
-              >Remove</button>
-            </div>
-          ))}
-        </div>
-
-        {players.length < 15 && (
-          <div style={{display:"flex",gap:8,marginBottom:16}}>
-            <input
-              className="input-field"
-              style={{marginBottom:0,flex:1}}
-              placeholder="New player name..."
-              value={newPlayer}
-              onChange={e => setNewPlayer(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && handleAddPlayer()}
-            />
-            <button
-              className="save-btn"
-              style={{padding:"12px 20px",whiteSpace:"nowrap"}}
-              onClick={handleAddPlayer}
-              disabled={!newPlayer.trim()}
-            >Add Player</button>
-          </div>
-        )}
-        {players.length >= 17 && (
-          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:13,color:"#e10600",letterSpacing:"0.05em",marginBottom:16}}>
-            Maximum of 17 players reached.
-          </div>
-        )}
-
-        <div style={{display:"flex",alignItems:"center",gap:12}}>
-          <button className="save-btn" onClick={handleSaveRoster}>Save Roster</button>
-          {rosterSaved && <span className="save-confirm">✓ Roster saved!</span>}
-        </div>
-      </div>
-
-      <div style={{background:"#0d0d0d",border:"1px solid #1a1a1a",borderRadius:10,padding:24}}>
-        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:13,letterSpacing:"0.18em",color:"#999",textTransform:"uppercase",marginBottom:16}}>
-          Change Commissioner Password
-        </div>
-        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:12,letterSpacing:"0.12em",color:"#555",marginBottom:4}}>Current password: <span style={{color:"#777"}}>{config.password}</span></div>
-        <div style={{marginTop:14}}>
-          <input
-            type="password"
-            className="input-field"
-            placeholder="New password (min 6 characters)"
-            value={newPw}
-            onChange={e => { setNewPw(e.target.value); setPwErr(""); }}
-          />
-          <input
-            type="password"
-            className="input-field"
-            placeholder="Confirm new password"
-            value={confirmPw}
-            onChange={e => { setConfirmPw(e.target.value); setPwErr(""); }}
-          />
-          {pwErr && <div className="input-error">{pwErr}</div>}
-          <div style={{display:"flex",alignItems:"center",gap:12}}>
-            <button className="save-btn" onClick={handleSavePassword}>Update Password</button>
-            {pwSaved && <span className="save-confirm">✓ Password updated!</span>}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function CommissionerStandings({ standings, allResults }) {
   const completedCount = Object.keys(allResults).length;
@@ -1333,24 +1072,29 @@ function CommissionerStandings({ standings, allResults }) {
 
   return (
     <div>
-      <div style={{display:"flex",alignItems:"baseline",gap:12,marginBottom:14}}>
-        <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:700,letterSpacing:"0.08em",color:"#fff",textTransform:"uppercase"}}>Season Standings</span>
-        <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:13,color:"#666",letterSpacing:"0.1em",textTransform:"uppercase"}}>{completedCount} of 22 races complete</span>
+      <div className="sh">
+        <span className="sh-title">Season Standings</span>
+        <span className="sh-meta">{completedCount} of 24 races complete</span>
       </div>
-      <div style={{background:"#0a0a0a",border:"1px solid #1a1a1a",borderRadius:10,padding:"14px 20px"}}>
-        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:10,letterSpacing:"0.2em",color:"#444",textTransform:"uppercase",display:"grid",gridTemplateColumns:"36px 1fr 70px 70px",gap:8,paddingBottom:8,borderBottom:"1px solid #111",marginBottom:2}}>
+      <div style={{background:"#0a0a0a",border:"1px solid #1a1a1a",borderRadius:10,padding:"20px 24px"}}>
+        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,letterSpacing:"0.2em",color:"#444",textTransform:"uppercase",display:"grid",gridTemplateColumns:"40px 1fr 80px 80px",gap:8,paddingBottom:10,borderBottom:"1px solid #111",marginBottom:4}}>
           <span>Rank</span><span>Player</span><span style={{textAlign:"right"}}>Points</span><span style={{textAlign:"right"}}>Races</span>
         </div>
         {standings.map((entry, i) => {
           const rank = i + 1;
           const racesPlayed = Object.keys(entry.raceTotals).length;
-          const rankColor = rank===1?"#FFD700":rank===2?"#C0C0C0":rank===3?"#CD7F32":"#444";
+          const rankColor = rank===1?"#FFD700":rank===2?"#C0C0C0":rank===3?"#CD7F32":"#333";
           return (
-            <div key={entry.player} style={{display:"grid",gridTemplateColumns:"36px 1fr 70px 70px",gap:8,alignItems:"center",padding:"6px 0",borderBottom:"1px solid #0d0d0d"}}>
-              <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:18,color:rankColor,lineHeight:1}}>{rank}</span>
-              <div style={{fontSize:14,fontWeight:500,color:"#ddd",lineHeight:1.2}}>{entry.player}</div>
-              <div style={{textAlign:"right",fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color:"#fff",lineHeight:1}}>{entry.total}</div>
-              <div style={{textAlign:"right",fontFamily:"'Barlow Condensed',sans-serif",fontSize:12,color:"#555"}}>{racesPlayed}r</div>
+            <div key={entry.player} style={{display:"grid",gridTemplateColumns:"40px 1fr 80px 80px",gap:8,alignItems:"center",padding:"9px 0",borderBottom:"1px solid #0d0d0d"}}>
+              <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,color:rankColor,lineHeight:1}}>{rank}</span>
+              <div>
+                <div style={{fontSize:15,fontWeight:500,color:"#ddd"}}>{entry.player}</div>
+                <div style={{height:2,background:"#111",borderRadius:1,marginTop:4,overflow:"hidden",maxWidth:200}}>
+                  <div style={{height:"100%",background:"linear-gradient(90deg,#e10600,#ff4500)",borderRadius:1,width:`${(entry.total/maxPts)*100}%`}}/>
+                </div>
+              </div>
+              <div style={{textAlign:"right",fontFamily:"'Bebas Neue',sans-serif",fontSize:24,color:"#fff",lineHeight:1}}>{entry.total}</div>
+              <div style={{textAlign:"right",fontFamily:"'Barlow Condensed',sans-serif",fontSize:13,color:"#555"}}>{racesPlayed} races</div>
             </div>
           );
         })}
@@ -1359,107 +1103,7 @@ function CommissionerStandings({ standings, allResults }) {
   );
 }
 
-function CommissionerPicks({ allPicks, onSavePick, players }) {
-  const roster = players || PLAYERS;
-  const [selectedPlayer, setSelectedPlayer] = useState(roster[0]);
-  const [selectedRace, setSelectedRace] = useState(1);
-  const [form, setForm] = useState({ p10: "", dnf1: "", constructor: "" });
-  const [saved, setSaved] = useState(false);
-
-  const existingPick = allPicks[selectedPlayer]?.[selectedRace];
-
-  useEffect(() => {
-    const existing = allPicks[selectedPlayer]?.[selectedRace] || {};
-    setForm({ p10: existing.p10 || "", dnf1: existing.dnf1 || "", constructor: existing.constructor || "" });
-    setSaved(false);
-  }, [selectedPlayer, selectedRace]);
-
-  const handleSave = () => {
-    if (!form.p10 || !form.dnf1 || !form.constructor) return;
-    onSavePick(selectedPlayer, selectedRace, form);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
-  };
-
-  const race = RACES.find(r => r.id === selectedRace);
-
-  return (
-    <div>
-      <div style={{display:"flex",alignItems:"baseline",gap:12,marginBottom:20}}>
-        <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:700,letterSpacing:"0.08em",color:"#fff",textTransform:"uppercase"}}>Player Picks</span>
-        <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:13,color:"#666",letterSpacing:"0.1em",textTransform:"uppercase"}}>Override or enter any player's picks</span>
-      </div>
-
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:20}}>
-        <div>
-          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:12,letterSpacing:"0.18em",color:"#888",textTransform:"uppercase",marginBottom:6}}>Player</div>
-          <select
-            className="form-select"
-            value={selectedPlayer}
-            onChange={e => setSelectedPlayer(e.target.value)}
-          >
-            {roster.map(p => <option key={p} value={p}>{p}</option>)}
-          </select>
-        </div>
-        <div>
-          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:12,letterSpacing:"0.18em",color:"#888",textTransform:"uppercase",marginBottom:6}}>Race</div>
-          <select
-            className="form-select"
-            value={selectedRace}
-            onChange={e => setSelectedRace(Number(e.target.value))}
-          >
-            {RACES.map(r => <option key={r.id} value={r.id}>{r.flag} R{r.id} · {r.name}</option>)}
-          </select>
-        </div>
-      </div>
-
-      <div className="pick-form">
-        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:12,letterSpacing:"0.2em",color:"#e10600",textTransform:"uppercase",marginBottom:4}}>
-          {existingPick ? "Override Existing Pick" : "Enter Pick"}
-        </div>
-        <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:26,color:"#fff",marginBottom:16}}>
-          {selectedPlayer} · {race?.flag} {race?.name} · R{race ? getRoundNumber(race.id) : ""}
-        </div>
-
-        {existingPick && (
-          <div style={{background:"#111",border:"1px solid #2a1800",borderRadius:6,padding:"10px 14px",marginBottom:16,fontFamily:"'Barlow Condensed',sans-serif",fontSize:13,color:"#cc8800",letterSpacing:"0.04em"}}>
-            ⚠ This player already has picks for this race. Saving will overwrite them.
-          </div>
-        )}
-
-        <div className="form-row">
-          <label className="form-label">P10 Driver <span>*</span></label>
-          <select className="form-select" value={form.p10} onChange={e => setForm(f => ({...f, p10: e.target.value}))}>
-            <option value="">Select a driver...</option>
-            {DRIVERS.map(d => <option key={d} value={d}>{d}</option>)}
-          </select>
-        </div>
-        <div className="form-row">
-          <label className="form-label">DNF1 Driver <span>*</span></label>
-          <select className="form-select" value={form.dnf1} onChange={e => setForm(f => ({...f, dnf1: e.target.value}))}>
-            <option value="">Select a driver...</option>
-            {DRIVERS.map(d => <option key={d} value={d}>{d}</option>)}
-          </select>
-        </div>
-        <div className="form-row">
-          <label className="form-label">Top Constructor <span>*</span></label>
-          <select className="form-select" value={form.constructor} onChange={e => setForm(f => ({...f, constructor: e.target.value}))}>
-            <option value="">Select a constructor...</option>
-            {CONSTRUCTORS.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </div>
-        <div className="form-save-row">
-          <button className="save-btn" onClick={handleSave} disabled={!form.p10 || !form.dnf1 || !form.constructor}>
-            {existingPick ? "Overwrite Picks" : "Save Picks"}
-          </button>
-          {saved && <span className="save-confirm">✓ Picks saved for {selectedPlayer}!</span>}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function AdminPanel({ allResults, onSaveResults, standings, allPicks, onSavePick, config, onSaveConfig, onHelp }) {
+function AdminPanel({ allResults, onSaveResults, standings }) {
   const [adminTab, setAdminTab] = useState("results");
   const [selectedRace, setSelectedRace] = useState(1);
   const [order, setOrder] = useState([...DRIVERS]);
@@ -1478,7 +1122,7 @@ function AdminPanel({ allResults, onSaveResults, standings, allPicks, onSavePick
       setDnf1("");
     }
     setSaved(false);
-  }, [selectedRace, allResults]);
+  }, [selectedRace]);
 
   const moveDriver = (i, dir) => {
     const arr = [...order];
@@ -1507,106 +1151,48 @@ function AdminPanel({ allResults, onSaveResults, standings, allPicks, onSavePick
       <div className="sh">
         <span className="sh-title">Commissioner</span>
       </div>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
-        <nav className="tabs" style={{marginBottom:0,borderBottom:"none"}}>
-          <button className={`tab ${adminTab==="results"?"active":""}`} onClick={() => setAdminTab("results")}>Enter Results</button>
-          <button className={`tab ${adminTab==="standings"?"active":""}`} onClick={() => setAdminTab("standings")}>Season Standings</button>
-          <button className={`tab ${adminTab==="picks"?"active":""}`} onClick={() => setAdminTab("picks")}>Player Picks</button>
-          <button className={`tab ${adminTab==="settings"?"active":""}`} onClick={() => setAdminTab("settings")}>Settings</button>
-        </nav>
-        <button
-          onClick={onHelp}
-          style={{background:"none",border:"1px solid #222",color:"#888",borderRadius:6,padding:"6px 16px",fontFamily:"'Barlow Condensed',sans-serif",fontSize:13,letterSpacing:"0.12em",textTransform:"uppercase",whiteSpace:"nowrap",transition:"all 0.15s",flexShrink:0}}
-          onMouseOver={e => { e.target.style.borderColor="#555"; e.target.style.color="#fff"; }}
-          onMouseOut={e => { e.target.style.borderColor="#222"; e.target.style.color="#888"; }}
-        >? Help</button>
-      </div>
-      <div style={{borderBottom:"1px solid #111",marginBottom:28}} />
+      <nav className="tabs" style={{marginBottom:28}}>
+        <button className={`tab ${adminTab==="results"?"active":""}`} onClick={() => setAdminTab("results")}>Enter Results</button>
+        <button className={`tab ${adminTab==="standings"?"active":""}`} onClick={() => setAdminTab("standings")}>Season Standings</button>
+      </nav>
 
       {adminTab === "standings" && <CommissionerStandings standings={standings} allResults={allResults} />}
-
-      {adminTab === "picks" && <CommissionerPicks allPicks={allPicks} onSavePick={onSavePick} players={config?.players} />}
-      {adminTab === "settings" && <CommissionerSettings config={config} onSaveConfig={onSaveConfig} />}
 
       {adminTab === "results" && (
       <div className="admin-grid">
         <div className="admin-race-list">
           {RACES.map(r => (
-            <div
-              key={r.id}
-              className={`admin-race-item ${selectedRace===r.id&&!r.cancelled?"active":""}`}
-              onClick={() => { if (!r.cancelled) setSelectedRace(r.id); }}
-              style={r.cancelled ? {opacity:0.4, cursor:"default"} : {}}
-            >
+            <div key={r.id} className={`admin-race-item ${selectedRace===r.id?"active":""}`} onClick={() => setSelectedRace(r.id)}>
               <div style={{display:"flex",alignItems:"center"}}>
                 <span className="ari-num">{r.id}</span>
                 <span className="ari-name">{r.flag} {r.name}</span>
               </div>
-              {r.cancelled
-                ? <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:10,color:"#cc2200",letterSpacing:"0.1em"}}>CANCELLED</span>
-                : allResults[r.id] && <span className="ari-done"/>
-              }
+              {allResults[r.id] && <span className="ari-done"/>}
             </div>
           ))}
         </div>
         <div className="admin-form">
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:4}}>
-            <div className="admin-form-title" style={{marginBottom:0}}>{race?.flag} {race?.name}</div>
-            {allResults[selectedRace] && (
-              <button
-                onClick={() => generateRaceExport({
-                  race,
-                  result: allResults[selectedRace],
-                  standings,
-                  allPicks,
-                })}
-                style={{
-                  background:"none",border:"1px solid #333",color:"#999",borderRadius:6,
-                  padding:"6px 14px",fontFamily:"'Barlow Condensed',sans-serif",
-                  fontSize:13,letterSpacing:"0.12em",textTransform:"uppercase",
-                  whiteSpace:"nowrap",transition:"all 0.15s",flexShrink:0,cursor:"pointer",
-                }}
-                onMouseOver={e => { e.currentTarget.style.borderColor="#e10600"; e.currentTarget.style.color="#fff"; }}
-                onMouseOut={e => { e.currentTarget.style.borderColor="#333"; e.currentTarget.style.color="#999"; }}
-                title="Download race results + standings as HTML file"
-              >⬇ Export Results</button>
-            )}
-          </div>
-          <div className="admin-form-sub">Round {race ? getRoundNumber(race.id) : ""} · {race?.date} — set driver order, constructor ranking auto-calculates</div>
+          <div className="admin-form-title">{race?.flag} {race?.name}</div>
+          <div className="admin-form-sub">Round {race?.id} · {race?.date} — set driver order, constructor ranking auto-calculates</div>
 
           <div className="admin-section-title">
             Finishing Order (P1 → P22)
-            <span className="reset-link" onClick={() => setOrder([...DRIVERS])}>Reset Order</span>
+            <span className="reset-link" onClick={() => setOrder([...DRIVERS])}>Reset</span>
+          </div>
+          <div className="driver-order-list">
+            {order.map((driver, i) => (
+              <div key={driver} className="driver-order-item">
+                <span className="doi-pos">{i + 1}</span>
+                <span className="doi-name">
+                  {driver}
+                  <span style={{fontSize:11,color:"#555",marginLeft:8,fontFamily:"'Barlow Condensed',sans-serif"}}>{DRIVER_CONSTRUCTOR[driver]}</span>
+                </span>
+                <button className="move-btn" onClick={() => moveDriver(i, -1)}>↑</button>
+                <button className="move-btn" onClick={() => moveDriver(i, 1)}>↓</button>
+              </div>
+            ))}
           </div>
 
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:12}}>
-            {order.map((driver, i) => {
-              const available = DRIVERS.filter(d => d === driver || !order.slice(0, order.length).filter((_, idx) => idx !== i).includes(d));
-              return (
-                <div key={i} style={{display:"flex",alignItems:"center",gap:8,background:"#141414",border:"1px solid #1a1a1a",borderRadius:5,padding:"6px 10px"}}>
-                  <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:16,color:"#ccc",fontWeight:600,width:24,flexShrink:0}}>{i+1}</span>
-                  <select
-                    value={driver}
-                    onChange={e => {
-                      const newDriver = e.target.value;
-                      if (!newDriver) return;
-                      const newOrder = [...order];
-                      const swapIdx = newOrder.indexOf(newDriver);
-                      if (swapIdx !== -1) newOrder[swapIdx] = newOrder[i];
-                      newOrder[i] = newDriver;
-                      setOrder(newOrder);
-                    }}
-                    style={{flex:1,background:"transparent",border:"none",color:"#ccc",fontSize:13,fontFamily:"'Barlow',sans-serif",outline:"none",cursor:"pointer"}}
-                  >
-                    {DRIVERS.map(d => (
-                      <option key={d} value={d} style={{background:"#1a1a1a"}}>{d}</option>
-                    ))}
-                  </select>
-                  <span style={{fontSize:11,color:"#444",fontFamily:"'Barlow Condensed',sans-serif",flexShrink:0}}>{DRIVER_CONSTRUCTOR[driver]?.slice(0,4)}</span>
-                </div>
-              );
-            })}
-          </div>
           <div className="admin-section-title">First DNF (DNF1)</div>
           <select className="form-select" style={{marginBottom:20}} value={dnf1} onChange={e => setDnf1(e.target.value)}>
             <option value="">None / No DNF</option>
@@ -1618,7 +1204,7 @@ function AdminPanel({ allResults, onSaveResults, standings, allPicks, onSavePick
             {conOrder.map((team, i) => (
               <div key={team} className="con-preview-row">
                 <div style={{display:"flex",alignItems:"center",gap:10}}>
-                  <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:16,color:"#ccc",fontWeight:600,width:24}}>{i+1}</span>
+                  <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:16,color:"#444",width:24}}>{i+1}</span>
                   <ConBadge team={team}/>
                 </div>
                 <span className="con-preview-pts">{teamPts[team]}pts</span>
@@ -1640,7 +1226,7 @@ function AdminPanel({ allResults, onSaveResults, standings, allPicks, onSavePick
 
 // ─── HOME ─────────────────────────────────────────────────────────────────────
 
-function Home({ onPlayer, onAdmin, onDirections, config }) {
+function Home({ onPlayer, onAdmin, onDirections }) {
   const [showPlayerModal, setShowPlayerModal] = useState(false);
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
@@ -1649,8 +1235,7 @@ function Home({ onPlayer, onAdmin, onDirections, config }) {
 
   const handlePlayerGo = () => { if (selectedPlayer) onPlayer(selectedPlayer); };
   const handleAdminGo = () => {
-    const pw = config?.password || ADMIN_PASSWORD;
-    if (adminPw === pw) { onAdmin(); setAdminErr(false); }
+    if (adminPw === ADMIN_PASSWORD) { onAdmin(); setAdminErr(false); }
     else setAdminErr(true);
   };
 
@@ -1664,7 +1249,7 @@ function Home({ onPlayer, onAdmin, onDirections, config }) {
         <span className="red">Constructors</span>
         <span className="challenge">Challenge</span>
       </div>
-      <div className="home-sub">17 Players · 22 Races · 3 Picks Per Race</div>
+      <div className="home-sub">15 Players · 24 Races · 3 Picks Per Race</div>
       <div className="home-cards">
         <div className="home-card" onClick={() => setShowPlayerModal(true)}>
           <div className="home-card-icon">🏎️</div>
@@ -1674,7 +1259,7 @@ function Home({ onPlayer, onAdmin, onDirections, config }) {
         <div className="home-card" onClick={() => setShowAdminModal(true)}>
           <div className="home-card-icon">⚙️</div>
           <div className="home-card-title">Commissioner</div>
-          <div className="home-card-desc">Enter race results, manage player picks, view standings, and configure league settings.</div>
+          <div className="home-card-desc">Enter race results after each Grand Prix to update everyone's scores.</div>
         </div>
       </div>
       <button className="home-how-btn" onClick={onDirections}>📋 How to Play</button>
@@ -1685,7 +1270,7 @@ function Home({ onPlayer, onAdmin, onDirections, config }) {
             <div className="modal-title">Who Are You?</div>
             <div className="modal-sub">Select your name from the list</div>
             <div className="player-list">
-              {(config?.players || PLAYERS).map(p => (
+              {PLAYERS.map(p => (
                 <button key={p} className={`player-btn ${selectedPlayer===p?"selected":""}`} onClick={() => setSelectedPlayer(p)}>{p}</button>
               ))}
             </div>
@@ -1720,15 +1305,13 @@ export default function App() {
   const [currentPlayer, setCurrentPlayer] = useState(null);
   const [allPicks, setAllPicks] = useState(SEED_PICKS);
   const [allResults, setAllResults] = useState(SEED_RESULTS);
-  const [config, setConfig] = useState(DEFAULT_CONFIG);
   const [playerTab, setPlayerTab] = useState("picks");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let picksLoaded = false;
     let resultsLoaded = false;
-    let configLoaded = false;
-    const checkDone = () => { if (picksLoaded && resultsLoaded && configLoaded) setLoading(false); };
+    const checkDone = () => { if (picksLoaded && resultsLoaded) setLoading(false); };
     const unsubPicks = onSnapshot(doc(db, "data", "picks"), snap => {
       if (snap.exists()) setAllPicks(snap.data());
       else fbSavePicks(SEED_PICKS);
@@ -1743,57 +1326,26 @@ export default function App() {
       } else { fbSaveResults(SEED_RESULTS); }
       resultsLoaded = true; checkDone();
     });
-    const unsubConfig = onSnapshot(doc(db, "data", "config"), snap => {
-      if (snap.exists()) {
-        const stored = snap.data();
-        // Merge any new players from the PLAYERS constant that aren't in the stored list
-        const storedPlayers = stored.players || [];
-        const merged = [
-          ...storedPlayers,
-          ...PLAYERS.filter(p => !storedPlayers.includes(p)),
-        ];
-        const updated = { ...stored, players: merged };
-        if (merged.length !== storedPlayers.length) fbSaveConfig(updated);
-        setConfig(updated);
-      } else {
-        fbSaveConfig(DEFAULT_CONFIG);
-      }
-      configLoaded = true; checkDone();
-    });
-    return () => { unsubPicks(); unsubResults(); unsubConfig(); };
+    return () => { unsubPicks(); unsubResults(); };
   }, []);
 
-  // Keep a ref to allPicks so handleSavePick always has the latest complete data
-  const allPicksRef = useRef(allPicks);
-  useEffect(() => { allPicksRef.current = allPicks; }, [allPicks]);
-
-  // Keep a ref to allResults so handleSaveResults always has the latest complete data
-  const allResultsRef = useRef(allResults);
-  useEffect(() => { allResultsRef.current = allResults; }, [allResults]);
-
   const handleSavePick = useCallback((player, raceId, pick) => {
-    const updated = {
-      ...allPicksRef.current,
-      [player]: { ...(allPicksRef.current[player] || {}), [raceId]: pick }
-    };
-    allPicksRef.current = updated;
-    setAllPicks(updated);
-    fbSavePicks(updated);
+    setAllPicks(prev => {
+      const updated = { ...prev, [player]: { ...(prev[player]||{}), [raceId]: pick } };
+      fbSavePicks(updated);
+      return updated;
+    });
   }, []);
 
   const handleSaveResults = useCallback((raceId, result) => {
-    const updated = { ...allResultsRef.current, [raceId]: result };
-    allResultsRef.current = updated;
-    setAllResults(updated);
-    fbSaveResults(updated);
+    setAllResults(prev => {
+      const updated = { ...prev, [raceId]: result };
+      fbSaveResults(updated);
+      return updated;
+    });
   }, []);
 
-  const handleSaveConfig = useCallback((newConfig) => {
-    setConfig(newConfig);
-    fbSaveConfig(newConfig);
-  }, []);
-
-  const standings = computeStandings(allPicks, allResults, config.players);
+  const standings = computeStandings(allPicks, allResults);
 
   if (loading) return (
     <><style>{CSS}</style>
@@ -1808,17 +1360,12 @@ export default function App() {
     <><style>{CSS}</style><Directions onBack={() => setScreen("home")} /></>
   );
 
-  if (screen === "commguide") return (
-    <><style>{CSS}</style><CommissionerGuide onBack={() => setScreen("admin")} /></>
-  );
-
   if (screen === "home") return (
     <><style>{CSS}</style>
       <Home
         onPlayer={name => { setCurrentPlayer(name); setScreen("player"); setPlayerTab("picks"); }}
         onAdmin={() => setScreen("admin")}
         onDirections={() => setScreen("directions")}
-        config={config}
       />
     </>
   );
@@ -1834,16 +1381,7 @@ export default function App() {
           </div>
         </div>
         <div className="content">
-          <AdminPanel
-            allResults={allResults}
-            onSaveResults={handleSaveResults}
-            standings={standings}
-            allPicks={allPicks}
-            onSavePick={handleSavePick}
-            config={config}
-            onSaveConfig={handleSaveConfig}
-            onHelp={() => setScreen("commguide")}
-          />
+          <AdminPanel allResults={allResults} onSaveResults={handleSaveResults} standings={standings} />
         </div>
       </div>
     </>
@@ -1873,7 +1411,7 @@ export default function App() {
             ))}
           </nav>
           {playerTab==="picks"     && <MyPicks player={currentPlayer} allPicks={allPicks} allResults={allResults} onSave={handleSavePick}/>}
-          {playerTab==="prerace"   && <PreRacePicks allPicks={allPicks} allResults={allResults} currentPlayer={currentPlayer} players={config.players}/>}
+          {playerTab==="prerace"   && <PreRacePicks allPicks={allPicks} allResults={allResults} currentPlayer={currentPlayer}/>}
           {playerTab==="standings" && <Leaderboard standings={standings} allResults={allResults} currentPlayer={currentPlayer}/>}
           {playerTab==="results"   && <RaceResultsView allPicks={allPicks} allResults={allResults} currentPlayer={currentPlayer} standings={standings}/>}
         </div>
