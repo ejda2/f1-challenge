@@ -41,10 +41,6 @@ const DRIVER_CONSTRUCTOR = {
 
 const F1_PTS = [25,18,15,12,10,8,6,4,2,1];
 
-const TRIFECTA_EXACT_PTS = 20;
-const TRIFECTA_BOXED_PTS = 8;
-const TRIFECTA_START_RACE_ID = 14; // Netherlands — first race after the Hungary summer break
-
 const F1_RESULTS_URL = "https://www.formula1.com/en/results/2026/races";
 
 function calcConstructorOrder(finishing_order) {
@@ -140,15 +136,6 @@ function scoreCon(team, constructor_order) {
   const pos = constructor_order.indexOf(team);
   return [3,2,1][pos] ?? 0;
 }
-function scoreTrifecta(trifecta, finishing_order) {
-  if (!trifecta || !trifecta.p1 || !trifecta.p2 || !trifecta.p3) return 0;
-  const picks = [trifecta.p1, trifecta.p2, trifecta.p3];
-  if (new Set(picks).size !== 3) return 0; // guard against duplicate driver picks
-  const top3 = finishing_order.slice(0, 3);
-  if (picks[0] === top3[0] && picks[1] === top3[1] && picks[2] === top3[2]) return TRIFECTA_EXACT_PTS;
-  const boxed = picks.every(d => top3.includes(d));
-  return boxed ? TRIFECTA_BOXED_PTS : 0;
-}
 
 function computeStandings(allPicks, allResults) {
   return PLAYERS.map(player => {
@@ -161,9 +148,8 @@ function computeStandings(allPicks, allResults) {
       const p10pts = scoreP10(pick.p10, result.finishing_order);
       const dnfpts = scoreDNF(pick.dnf1, result.dnf1);
       const conpts = scoreCon(pick.constructor, result.constructor_order);
-      const trifectapts = scoreTrifecta(pick.trifecta, result.finishing_order);
-      const raceTotal = p10pts + dnfpts + conpts + trifectapts;
-      raceTotals[Number(raceId)] = { ...pick, p10pts, dnfpts, conpts, trifectapts, total: raceTotal };
+      const raceTotal = p10pts + dnfpts + conpts;
+      raceTotals[Number(raceId)] = { ...pick, p10pts, dnfpts, conpts, total: raceTotal };
       total += raceTotal;
     });
     return { player, total, raceTotals };
@@ -499,15 +485,9 @@ function Directions({ onBack }) {
           </div>
         </div>
         <div className="dir-card" style={{marginTop:10}}>
-          <div className="dir-card-title">Bonus Pick — The Trifecta (optional, up to {TRIFECTA_EXACT_PTS} pts)</div>
+          <div className="dir-card-title">Maximum: 38 pts per race · 912 pts for the season</div>
           <div className="dir-card-body" style={{marginTop:6}}>
-            Starting after the summer break, you can also predict the top 3 finishers: P1, P2, and P3. Get all three right in exact order for <strong>{TRIFECTA_EXACT_PTS} points</strong>. Get the right three drivers in any order (a "boxed" Trifecta) for <strong>{TRIFECTA_BOXED_PTS} points</strong>. This pick is completely optional. Skip it and your other three picks score as normal.
-          </div>
-        </div>
-        <div className="dir-card" style={{marginTop:10}}>
-          <div className="dir-card-title">Maximum: 58 pts per race with the Trifecta</div>
-          <div className="dir-card-body" style={{marginTop:6}}>
-            25 (P10) + 10 (DNF1) + 3 (Constructor) + {TRIFECTA_EXACT_PTS} (Trifecta) = <strong>58 pts</strong> maximum per race in weeks the Trifecta is live.
+            25 (P10) + 10 (DNF1) + 3 (Constructor) = <strong>38 pts</strong> maximum per race across <strong>24 races</strong>.
           </div>
         </div>
       </div>
@@ -594,32 +574,22 @@ function Leaderboard({ standings, allResults, currentPlayer }) {
                   );
                   const p10pos = res.finishing_order.indexOf(d.p10) + 1;
                   return (
-                    <div key={raceId}>
-                      <div className="race-picks-row">
-                        <span className="rpr-race">{race?.flag} {race?.name}</span>
-                        <span>
-                          <span className={`rpr-val ${d.p10pts>0?"correct":""}`}>{d.p10}</span>
-                          <span className={ptsBadgeClass(d.p10pts)} style={{marginLeft:6}}>{d.p10pts}pt</span>
-                          <div style={{fontSize:11,color:"#666",fontFamily:"'Barlow Condensed',sans-serif",marginTop:2}}>Finished P{p10pos}</div>
-                        </span>
-                        <span>
-                          <span className={`rpr-val ${d.dnfpts>0?"correct":""}`}>{d.dnf1}</span>
-                          {d.dnfpts > 0 && <span className="badge hit" style={{marginLeft:6}}>+10</span>}
-                        </span>
-                        <span>
-                          <ConBadge team={d.constructor}/>
-                          {d.conpts > 0 && <span className="badge hit" style={{marginLeft:4}}>+{d.conpts}</span>}
-                        </span>
-                        <span className={`rpr-pts ${d.total===0?"zero":""}`}>{d.total}</span>
-                      </div>
-                      {d.trifecta && (
-                        <div style={{fontSize:12,color:"#888",padding:"2px 0 8px",fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:"0.05em"}}>
-                          🏆 Trifecta: {d.trifecta.p1} · {d.trifecta.p2} · {d.trifecta.p3}
-                          {d.trifectapts > 0
-                            ? <span className="badge hit" style={{marginLeft:8}}>+{d.trifectapts}</span>
-                            : <span style={{marginLeft:8,color:"#555"}}>+0</span>}
-                        </div>
-                      )}
+                    <div className="race-picks-row" key={raceId}>
+                      <span className="rpr-race">{race?.flag} {race?.name}</span>
+                      <span>
+                        <span className={`rpr-val ${d.p10pts>0?"correct":""}`}>{d.p10}</span>
+                        <span className={ptsBadgeClass(d.p10pts)} style={{marginLeft:6}}>{d.p10pts}pt</span>
+                        <div style={{fontSize:11,color:"#666",fontFamily:"'Barlow Condensed',sans-serif",marginTop:2}}>Finished P{p10pos}</div>
+                      </span>
+                      <span>
+                        <span className={`rpr-val ${d.dnfpts>0?"correct":""}`}>{d.dnf1}</span>
+                        {d.dnfpts > 0 && <span className="badge hit" style={{marginLeft:6}}>+10</span>}
+                      </span>
+                      <span>
+                        <ConBadge team={d.constructor}/>
+                        {d.conpts > 0 && <span className="badge hit" style={{marginLeft:4}}>+{d.conpts}</span>}
+                      </span>
+                      <span className={`rpr-pts ${d.total===0?"zero":""}`}>{d.total}</span>
                     </div>
                   );
                 })}
@@ -641,35 +611,20 @@ function MyPicks({ player, allPicks, allResults, onSave }) {
   const playerPicks = allPicks[player] || {};
   const nextRace = getNextRace();
   const [editRace, setEditRace] = useState(nextRace?.id || null);
-  const [form, setForm] = useState({ p10: "", dnf1: "", constructor: "", trifecta: { p1: "", p2: "", p3: "" } });
+  const [form, setForm] = useState({ p10: "", dnf1: "", constructor: "" });
   const [saved, setSaved] = useState(false);
-  const [trifectaErr, setTrifectaErr] = useState(false);
 
   useEffect(() => {
     if (editRace) {
       const existing = playerPicks[editRace] || {};
-      setForm({
-        p10: existing.p10 || "",
-        dnf1: existing.dnf1 || "",
-        constructor: existing.constructor || "",
-        trifecta: existing.trifecta || { p1: "", p2: "", p3: "" },
-      });
+      setForm({ p10: existing.p10 || "", dnf1: existing.dnf1 || "", constructor: existing.constructor || "" });
       setSaved(false);
-      setTrifectaErr(false);
     }
   }, [editRace, player]);
 
-  const trifectaTouched = form.trifecta.p1 || form.trifecta.p2 || form.trifecta.p3;
-  const trifectaComplete = form.trifecta.p1 && form.trifecta.p2 && form.trifecta.p3;
-  const trifectaDupes = trifectaComplete && new Set([form.trifecta.p1, form.trifecta.p2, form.trifecta.p3]).size !== 3;
-
   const handleSave = () => {
     if (!form.p10 || !form.dnf1 || !form.constructor) return;
-    if (trifectaTouched && (!trifectaComplete || trifectaDupes)) { setTrifectaErr(true); return; }
-    setTrifectaErr(false);
-    const pick = { p10: form.p10, dnf1: form.dnf1, constructor: form.constructor };
-    pick.trifecta = trifectaComplete && !trifectaDupes ? form.trifecta : null;
-    onSave(player, editRace, pick);
+    onSave(player, editRace, form);
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   };
@@ -737,9 +692,6 @@ function MyPicks({ player, allPicks, allResults, onSave }) {
                     {label:"P10 Driver",   val: existingPick.p10},
                     {label:"DNF1 Driver",  val: existingPick.dnf1},
                     {label:"Constructor",  val: existingPick.constructor},
-                    ...(existingPick.trifecta
-                      ? [{label:"Trifecta", val: `${existingPick.trifecta.p1} · ${existingPick.trifecta.p2} · ${existingPick.trifecta.p3}`}]
-                      : []),
                   ].map(item => (
                     <div className="locked-pick-row" key={item.label}>
                       <span className="locked-pick-label">{item.label}</span>
@@ -778,44 +730,6 @@ function MyPicks({ player, allPicks, allResults, onSave }) {
                   {CONSTRUCTORS.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
-              {editableRace.id >= TRIFECTA_START_RACE_ID && (
-              <div style={{borderTop:"1px solid #1a1a1a",margin:"22px 0 18px",paddingTop:18}}>
-                <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:12,letterSpacing:"0.2em",color:"#e10600",textTransform:"uppercase",marginBottom:4}}>
-                  Bonus · Optional
-                </div>
-                <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"24px",color:"#fff",marginBottom:8}}>
-                  🏆 The Trifecta
-                </div>
-                <div style={{fontSize:13,color:"#888",marginBottom:16}}>
-                  Predict the top 3 finishers. Exact order pays {TRIFECTA_EXACT_PTS} pts. Right three drivers, any order, pays {TRIFECTA_BOXED_PTS} pts. Leave blank to skip.
-                </div>
-                <div className="form-row">
-                  <label className="form-label">P1</label>
-                  <select className="form-select" value={form.trifecta.p1} onChange={e => setForm(f => ({...f, trifecta: {...f.trifecta, p1: e.target.value}}))}>
-                    <option value="">Select a driver...</option>
-                    {DRIVERS.map(d => <option key={d} value={d}>{d}</option>)}
-                  </select>
-                </div>
-                <div className="form-row">
-                  <label className="form-label">P2</label>
-                  <select className="form-select" value={form.trifecta.p2} onChange={e => setForm(f => ({...f, trifecta: {...f.trifecta, p2: e.target.value}}))}>
-                    <option value="">Select a driver...</option>
-                    {DRIVERS.map(d => <option key={d} value={d}>{d}</option>)}
-                  </select>
-                </div>
-                <div className="form-row">
-                  <label className="form-label">P3</label>
-                  <select className="form-select" value={form.trifecta.p3} onChange={e => setForm(f => ({...f, trifecta: {...f.trifecta, p3: e.target.value}}))}>
-                    <option value="">Select a driver...</option>
-                    {DRIVERS.map(d => <option key={d} value={d}>{d}</option>)}
-                  </select>
-                </div>
-                {trifectaErr && (
-                  <div className="input-error">Fill in all three Trifecta picks with different drivers, or leave all three blank.</div>
-                )}
-              </div>
-              )}
-
               <div className="form-save-row">
                 <button className="save-btn" onClick={handleSave} disabled={!form.p10 || !form.dnf1 || !form.constructor}>
                   {existingPick ? "Update Picks" : "Submit Picks"}
@@ -903,7 +817,6 @@ function PreRacePicks({ allPicks, allResults, currentPlayer }) {
                 <th>P10 Pick</th>
                 <th>DNF1</th>
                 <th>Constructor</th>
-                <th>Trifecta</th>
               </tr>
             </thead>
             <tbody>
@@ -921,12 +834,9 @@ function PreRacePicks({ allPicks, allResults, currentPlayer }) {
                         <td>{pick.p10}</td>
                         <td>{pick.dnf1}</td>
                         <td><ConBadge team={pick.constructor}/></td>
-                        <td style={{fontSize:12,color:"#888"}}>
-                          {pick.trifecta ? `${pick.trifecta.p1} · ${pick.trifecta.p2} · ${pick.trifecta.p3}` : "—"}
-                        </td>
                       </>
                     ) : (
-                      <td colSpan={4} className="prerace-nopick">No pick submitted</td>
+                      <td colSpan={3} className="prerace-nopick">No pick submitted</td>
                     )}
                   </tr>
                 );
@@ -997,13 +907,6 @@ function RaceResultsView({ allPicks, allResults, currentPlayer, standings }) {
                   <ConBadge team={result.constructor_order[0]} />
                   <div className="rs-sub" style={{marginTop:6}}>3pts if picked correctly</div>
                 </div>
-                <div className="rs-box">
-                  <div className="rs-label">🏆 Trifecta (P1-P2-P3)</div>
-                  <div className="rs-val" style={{fontSize:16}}>
-                    {result.finishing_order[0]} · {result.finishing_order[1]} · {result.finishing_order[2]}
-                  </div>
-                  <div className="rs-sub">{TRIFECTA_EXACT_PTS}pts exact order · {TRIFECTA_BOXED_PTS}pts boxed</div>
-                </div>
               </div>
               <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,letterSpacing:"0.2em",color:"#555",textTransform:"uppercase",marginBottom:10}}>
                 All Picks This Race
@@ -1011,7 +914,7 @@ function RaceResultsView({ allPicks, allResults, currentPlayer, standings }) {
               <table className="results-table">
                 <thead>
                   <tr>
-                    <th>#</th><th>Player</th><th>P10 Pick</th><th>DNF1</th><th>Constructor</th><th>Trifecta</th>
+                    <th>#</th><th>Player</th><th>P10 Pick</th><th>DNF1</th><th>Constructor</th>
                     <th style={{textAlign:"right"}}>Pts</th>
                   </tr>
                 </thead>
@@ -1041,10 +944,6 @@ function RaceResultsView({ allPicks, allResults, currentPlayer, standings }) {
                           <td>
                             <ConBadge team={d.constructor}/>
                             {d.conpts > 0 && <span className="badge hit" style={{marginLeft:4}}>+{d.conpts}</span>}
-                          </td>
-                          <td style={{fontSize:12,color:"#888"}}>
-                            {d.trifecta ? `${d.trifecta.p1} · ${d.trifecta.p2} · ${d.trifecta.p3}` : "—"}
-                            {d.trifectapts > 0 && <span className="badge hit" style={{marginLeft:4}}>+{d.trifectapts}</span>}
                           </td>
                           <td style={{textAlign:"right",fontFamily:"'Bebas Neue',sans-serif",fontSize:22,color:"#fff"}}>{d.total}</td>
                         </tr>
