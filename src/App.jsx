@@ -60,14 +60,12 @@ function calcConstructorOrder(finishing_order) {
   });
 }
 
-const CANCELLED_RACES = [4, 5]; // Bahrain and Saudi Arabia — cancelled due to Iran conflict
+const CANCELLED_RACES = []; // no cancelled races currently — Bahrain rescheduled, Saudi Arabia removed
 
 const RACES = [
   { id:1,  name:"Australia",     date:"2026-03-08", flag:"🇦🇺" },
   { id:2,  name:"China",         date:"2026-03-15", flag:"🇨🇳" },
   { id:3,  name:"Japan",         date:"2026-03-29", flag:"🇯🇵" },
-  { id:4,  name:"Bahrain",       date:"2026-04-12", flag:"🇧🇭", cancelled:true },
-  { id:5,  name:"Saudi Arabia",  date:"2026-04-19", flag:"🇸🇦", cancelled:true },
   { id:6,  name:"Miami",         date:"2026-05-03", flag:"🇺🇸" },
   { id:7,  name:"Canada",        date:"2026-05-24", flag:"🇨🇦" },
   { id:8,  name:"Monaco",        date:"2026-06-07", flag:"🇲🇨" },
@@ -80,6 +78,7 @@ const RACES = [
   { id:15, name:"Monza",         date:"2026-09-06", flag:"🇮🇹" },
   { id:16, name:"Madrid",        date:"2026-09-13", flag:"🇪🇸" },
   { id:17, name:"Azerbaijan",    date:"2026-09-27", flag:"🇦🇿" },
+  { id:4,  name:"Bahrain",       date:"2026-10-04", flag:"🇧🇭" },
   { id:18, name:"Singapore",     date:"2026-10-11", flag:"🇸🇬" },
   { id:19, name:"Austin",        date:"2026-10-25", flag:"🇺🇸" },
   { id:20, name:"Mexico",        date:"2026-11-01", flag:"🇲🇽" },
@@ -161,7 +160,8 @@ function computeStandings(allPicks, allResults, players) {
 }
 
 function getRoundNumber(raceId) {
-  return RACES.filter(r => !r.cancelled && r.id <= raceId).length;
+  const active = RACES.filter(r => !r.cancelled);
+  return active.findIndex(r => r.id === raceId) + 1;
 }
 
 function isRaceLocked(race) {
@@ -507,9 +507,9 @@ function Directions({ onBack }) {
           </div>
         </div>
         <div className="dir-card" style={{marginTop:10}}>
-          <div className="dir-card-title">Maximum: 38 pts per race · 836 pts for the season</div>
+          <div className="dir-card-title">Maximum: 38 pts per race · 874 pts for the season</div>
           <div className="dir-card-body" style={{marginTop:6}}>
-            25 (P10) + 10 (DNF1) + 3 (Constructor) = <strong>38 pts</strong> maximum per race across <strong>22 races</strong>.
+            25 (P10) + 10 (DNF1) + 3 (Constructor) = <strong>38 pts</strong> maximum per race across <strong>23 races</strong>.
           </div>
         </div>
       </div>
@@ -550,7 +550,7 @@ function Leaderboard({ standings, allResults, currentPlayer }) {
     <div>
       <div className="sh">
         <span className="sh-title">Standings</span>
-        <span className="sh-meta">Race {completedRaces.length} of 22</span>
+        <span className="sh-meta">Race {completedRaces.length} of 23</span>
       </div>
       <div className="lb-header">
         <span></span><span>Player</span><span style={{textAlign:"right"}}>Points</span>
@@ -667,7 +667,7 @@ function MyPicks({ player, allPicks, allResults, onSave }) {
         <div className="pick-race-banner">
           <div className="prb-eyebrow">Next Race · {nextRace.date} · Picks close when results are entered</div>
           <div className="prb-title">{nextRace.flag} {nextRace.name} Grand Prix</div>
-          <div className="prb-date">Round {getRoundNumber(nextRace.id)} of 22</div>
+          <div className="prb-date">Round {getRoundNumber(nextRace.id)} of 23</div>
         </div>
       )}
 
@@ -1118,7 +1118,7 @@ function generateRaceExport({ race, result, standings, allPicks }) {
 <body>
 <div class="eyebrow">P10 · DNF1 · Constructors Challenge · 2026</div>
 <div class="gp-title">Season Standings</div>
-<div class="gp-sub">After ${race.flag} ${race.name} · Round ${roundNum} · ${completedCount} of 22 races complete</div>
+<div class="gp-sub">After ${race.flag} ${race.name} · Round ${roundNum} · ${completedCount} of 23 races complete</div>
 <div class="table-wrap">
   <table>
     <thead><tr><th>#</th><th>Player</th><th></th><th style="text-align:right">Points</th><th style="text-align:right">Races</th></tr></thead>
@@ -1336,7 +1336,7 @@ function CommissionerStandings({ standings, allResults }) {
     <div>
       <div style={{display:"flex",alignItems:"baseline",gap:12,marginBottom:14}}>
         <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:700,letterSpacing:"0.08em",color:"#fff",textTransform:"uppercase"}}>Season Standings</span>
-        <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:13,color:"#666",letterSpacing:"0.1em",textTransform:"uppercase"}}>{completedCount} of 22 races complete</span>
+        <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:13,color:"#666",letterSpacing:"0.1em",textTransform:"uppercase"}}>{completedCount} of 23 races complete</span>
       </div>
       <div style={{background:"#0a0a0a",border:"1px solid #1a1a1a",borderRadius:10,padding:"14px 20px"}}>
         <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:10,letterSpacing:"0.2em",color:"#444",textTransform:"uppercase",display:"grid",gridTemplateColumns:"36px 1fr 70px 70px",gap:8,paddingBottom:8,borderBottom:"1px solid #111",marginBottom:2}}>
@@ -1665,7 +1665,7 @@ function Home({ onPlayer, onAdmin, onDirections, config }) {
         <span className="red">Constructors</span>
         <span className="challenge">Challenge</span>
       </div>
-      <div className="home-sub">17 Players · 22 Races · 3 Picks Per Race</div>
+      <div className="home-sub">17 Players · 23 Races · 3 Picks Per Race</div>
       <div className="home-cards">
         <div className="home-card" onClick={() => setShowPlayerModal(true)}>
           <div className="home-card-icon">🏎️</div>
