@@ -683,7 +683,7 @@ function MyPicks({ player, allPicks, allResults, onSave }) {
               className={`rc ${hasResult?"done":""} ${editRace===r.id&&!cancelled?"active":""} ${hasPick&&!locked&&!cancelled?"has-pick":""} ${cancelled?"cancelled":""}`}
               onClick={() => { if (!cancelled) setEditRace(r.id); }}
             >
-              <div className="rc-num">{String(r.id).padStart(2,"0")}</div>
+              <div className="rc-num">{String(getRoundNumber(r.id)).padStart(2,"0")}</div>
               <div className="rc-flag">{r.flag}</div>
               <div className="rc-name">{r.name}</div>
               <div className="rc-date">{r.date}</div>
@@ -899,7 +899,7 @@ function RaceResultsView({ allPicks, allResults, currentPlayer, standings }) {
             className={`rc ${allResults[r.id]?"done":""} ${selectedRace===r.id&&!r.cancelled?"active":""} ${r.cancelled?"cancelled":""}`}
             onClick={() => { if (!r.cancelled) setSelectedRace(r.id); }}
           >
-            <div className="rc-num">{String(r.id).padStart(2,"0")}</div>
+            <div className="rc-num">{String(getRoundNumber(r.id)).padStart(2,"0")}</div>
             <div className="rc-flag">{r.flag}</div>
             <div className="rc-name">{r.name}</div>
             <div className="rc-date">{r.date}</div>
@@ -1409,7 +1409,7 @@ function CommissionerPicks({ allPicks, onSavePick, players }) {
             value={selectedRace}
             onChange={e => setSelectedRace(Number(e.target.value))}
           >
-            {RACES.map(r => <option key={r.id} value={r.id}>{r.flag} R{r.id} · {r.name}</option>)}
+            {RACES.map(r => <option key={r.id} value={r.id}>{r.flag} R{getRoundNumber(r.id)} · {r.name}</option>)}
           </select>
         </div>
       </div>
@@ -1540,7 +1540,7 @@ function AdminPanel({ allResults, onSaveResults, standings, allPicks, onSavePick
               style={r.cancelled ? {opacity:0.4, cursor:"default"} : {}}
             >
               <div style={{display:"flex",alignItems:"center"}}>
-                <span className="ari-num">{r.id}</span>
+                <span className="ari-num">{getRoundNumber(r.id)}</span>
                 <span className="ari-name">{r.flag} {r.name}</span>
               </div>
               {r.cancelled
