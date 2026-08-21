@@ -15,7 +15,7 @@ const PLAYERS = [
 
 const DRIVERS = [
   "Albon","Alonso","Antonelli","Bearman","Bortoleto","Bottas",
-  "Colapinto","Gasly","Hadjar","Hamilton","Hulkenberg","Lawson",
+  "Colapinto","Gasly","Hamilton","Hulkenberg","Lawson",
   "Leclerc","Lindblad","Norris","Ocon","Perez","Piastri",
   "Russell","Sainz","Stroll","Tsunoda","Verstappen",
 ];
