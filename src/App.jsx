@@ -37,7 +37,6 @@ const DRIVER_CONSTRUCTOR = {
   Albon:"Williams",      Sainz:"Williams",
   Perez:"Cadillac",      Bottas:"Cadillac",
   Stroll:"Aston Martin", Alonso:"Aston Martin",
-  "Myles Garrett":"Cleveland Browns", "Shedeur Sanders":"Cleveland Browns",
 };
 
 const F1_PTS = [25,18,15,12,10,8,6,4,2,1];
