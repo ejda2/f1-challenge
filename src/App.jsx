@@ -1145,6 +1145,185 @@ function generateRaceExport({ race, result, standings, allPicks }) {
   setTimeout(() => downloadHtml(tab2Html, `${safeName}_GP_Standings.html`), 400);
 }
 
+// ─── SEASON REPORT (commissioner year-to-date export) ────────────────────────
+// One combined HTML file, one page per completed race, in round order.
+// Each page shows that race's results (same cards + picks table as the
+// single-race export) alongside the season standings AS THEY STOOD after
+// that race — not the current/final totals — so the report is accurate no
+// matter when it's generated relative to the season. Prints cleanly to PDF
+// via the page-break-after rule on .report-page.
+
+function srPtsBadge(pts, max) {
+  if (pts === max) return `<span class="badge perfect">${pts}pt</span>`;
+  if (pts > 0) return `<span class="badge hit">${pts}pt</span>`;
+  return `<span class="badge">${pts}pt</span>`;
+}
+function srConBadge(team) {
+  const c = TEAM_COLORS[team] || "#888";
+  return `<span class="con-badge" style="background:${c}22;color:${c};border:1px solid ${c}44">${team}</span>`;
+}
+
+function generateSeasonReport({ allResults, allPicks, players }) {
+  const allRacesInOrder = RACES.filter(r => !r.cancelled);
+  const completedRaces = allRacesInOrder.filter(r => allResults[r.id]);
+
+  if (completedRaces.length === 0) {
+    alert("No race results entered yet — nothing to report.");
+    return;
+  }
+
+  const sharedCSS = `
+    @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400;500&display=swap');
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:#050505;color:#f0ede8;font-family:'Barlow',sans-serif}
+    .eyebrow{font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:0.28em;color:#e10600;text-transform:uppercase;margin-bottom:6px}
+    .gp-title{font-family:'Bebas Neue',sans-serif;font-size:40px;color:#fff;line-height:1;margin-bottom:4px}
+    .gp-sub{font-family:'Barlow Condensed',sans-serif;font-size:12px;color:#555;letter-spacing:0.1em;margin-bottom:18px}
+    .section-title{font-family:'Bebas Neue',sans-serif;font-size:20px;color:#fff;margin-bottom:8px;letter-spacing:0.03em}
+    table{width:100%;border-collapse:collapse}
+    th{font-family:'Barlow Condensed',sans-serif;font-size:9px;letter-spacing:0.18em;color:#444;text-transform:uppercase;text-align:left;padding:6px 9px;border-bottom:1px solid #111}
+    td{padding:6px 9px;border-bottom:1px solid #0d0d0d;font-size:11px;vertical-align:middle}
+    tr:last-child td{border-bottom:none}
+    .rank{font-family:'Bebas Neue',sans-serif;font-size:15px;color:#333;width:26px}
+    .player-name{color:#ccc;font-weight:500;font-size:11px;white-space:nowrap}
+    .pts-col{text-align:right}
+    .big-pts{font-family:'Bebas Neue',sans-serif;font-size:18px;color:#fff;line-height:1}
+    .perfect-pts{color:#e10600}
+    .pos-label{font-family:'Barlow Condensed',sans-serif;font-size:9px;color:#444;min-width:20px;display:inline-block}
+    .hit-text{color:#4cff91}
+    .badge{font-family:'Barlow Condensed',sans-serif;font-size:8px;letter-spacing:0.05em;padding:1px 5px;border-radius:3px;background:#151515;color:#555;display:inline-block}
+    .badge.hit{background:rgba(76,255,145,0.1);color:#4cff91}
+    .badge.perfect{background:rgba(225,6,0,0.15);color:#ff4444}
+    .con-badge{font-family:'Barlow Condensed',sans-serif;font-size:9px;letter-spacing:0.04em;padding:1px 7px;border-radius:3px;display:inline-block;font-weight:600}
+    .table-wrap{background:#0a0a0a;border:1px solid #1a1a1a;border-radius:8px;padding:2px 0}
+    .result-cards{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px}
+    .rc{background:#0d0d0d;border:1px solid #1a1a1a;border-radius:8px;padding:10px 11px}
+    .rc-label{font-family:'Barlow Condensed',sans-serif;font-size:8px;letter-spacing:0.2em;color:#555;text-transform:uppercase;margin-bottom:3px}
+    .rc-val{font-family:'Bebas Neue',sans-serif;font-size:20px;color:#e10600;line-height:1.1}
+    .rc-sub{font-size:8px;color:#444;font-family:'Barlow Condensed',sans-serif;margin-top:3px;letter-spacing:0.04em}
+
+    .cover{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px}
+    .cover-eyebrow{font-family:'Barlow Condensed',sans-serif;font-size:14px;letter-spacing:0.3em;color:#e10600;text-transform:uppercase;margin-bottom:16px}
+    .cover-title{font-family:'Bebas Neue',sans-serif;font-size:72px;color:#fff;line-height:0.95;margin-bottom:10px}
+    .cover-sub{font-family:'Barlow Condensed',sans-serif;font-size:16px;letter-spacing:0.1em;color:#999}
+
+    .report-page{page-break-after:always;padding:28px 32px;max-width:1100px;margin:0 auto}
+    .report-page:last-child{page-break-after:auto}
+    .report-columns{display:grid;grid-template-columns:1.3fr 1fr;gap:20px;align-items:start}
+    @media print{
+      .cover{page-break-after:always}
+      .report-page{page-break-after:always}
+    }
+  `;
+
+  const pagesHtml = completedRaces.map((race, idx) => {
+    const roundNum = getRoundNumber(race.id);
+    const completedCount = idx + 1;
+
+    // Standings AS OF this round: only feed results for races up to and
+    // including this one (in season order) into computeStandings.
+    const raceIdsThroughRound = completedRaces.slice(0, idx + 1).map(r => r.id);
+    const filteredResults = {};
+    raceIdsThroughRound.forEach(id => { filteredResults[id] = allResults[id]; });
+    const standingsThroughRound = computeStandings(allPicks, filteredResults, players);
+
+    const result = allResults[race.id];
+    const p10Driver = result.finishing_order[9];
+    const conP1 = result.constructor_order[0];
+    const conColor = TEAM_COLORS[conP1] || "#888";
+
+    const raceRows = standingsThroughRound
+      .filter(s => s.raceTotals[race.id])
+      .sort((a, b) => b.raceTotals[race.id].total - a.raceTotals[race.id].total);
+
+    const picksRowsHtml = raceRows.map((s, i) => {
+      const d = s.raceTotals[race.id];
+      const pos = result.finishing_order.indexOf(d.p10) + 1;
+      return `<tr>
+        <td class="rank">${i + 1}</td>
+        <td class="player-name">${s.player}</td>
+        <td><span class="pos-label">P${pos}</span> <span class="${d.p10pts > 0 ? "hit-text" : ""}">${d.p10}</span> ${srPtsBadge(d.p10pts, 25)}</td>
+        <td><span class="${d.dnfpts > 0 ? "hit-text" : ""}">${d.dnf1}</span>${d.dnfpts > 0 ? ' <span class="badge hit">+10</span>' : ""}</td>
+        <td>${srConBadge(d.constructor)}${d.conpts > 0 ? ` <span class="badge hit">+${d.conpts}</span>` : ""}</td>
+        <td class="pts-col"><span class="big-pts ${d.total === 38 ? "perfect-pts" : ""}">${d.total}</span></td>
+      </tr>`;
+    }).join("");
+
+    const standingsRowsHtml = standingsThroughRound.map((entry, i) => {
+      const rank = i + 1;
+      const rankColor = rank === 1 ? "#FFD700" : rank === 2 ? "#C0C0C0" : rank === 3 ? "#CD7F32" : "#555";
+      const racesPlayed = Object.keys(entry.raceTotals).length;
+      const barWidth = Math.round((entry.total / (standingsThroughRound[0]?.total || 1)) * 100);
+      return `<tr>
+        <td class="rank" style="color:${rankColor}">${rank}</td>
+        <td class="player-name">${entry.player}</td>
+        <td style="width:100px">
+          <div style="height:3px;background:#111;border-radius:2px;overflow:hidden;max-width:90px">
+            <div style="height:100%;width:${barWidth}%;background:linear-gradient(90deg,#e10600,#ff4500);border-radius:2px"></div>
+          </div>
+        </td>
+        <td class="pts-col"><span class="big-pts">${entry.total}</span></td>
+        <td style="text-align:right;font-family:'Barlow Condensed',sans-serif;font-size:10px;color:#444;padding-left:0">${racesPlayed}r</td>
+      </tr>`;
+    }).join("");
+
+    return `
+      <section class="report-page">
+        <div class="eyebrow">P10 · DNF1 · Constructors Challenge · 2026</div>
+        <div class="gp-title">${race.flag} ${race.name} Grand Prix</div>
+        <div class="gp-sub">Round ${roundNum} · ${race.date} · ${completedCount} of ${allRacesInOrder.length} races complete</div>
+        <div class="report-columns">
+          <div>
+            <div class="result-cards">
+              <div class="rc"><div class="rc-label">P10 Finisher</div><div class="rc-val">${p10Driver}</div><div class="rc-sub">25pts if picked exactly</div></div>
+              <div class="rc"><div class="rc-label">DNF1</div><div class="rc-val">${result.dnf1 || "None"}</div><div class="rc-sub">10pt bonus if picked</div></div>
+              <div class="rc"><div class="rc-label">Constructor P1</div><div class="rc-val" style="color:${conColor}">${conP1}</div><div class="rc-sub">3pts if picked correctly</div></div>
+            </div>
+            <div class="section-title">All Picks · ${race.name} GP</div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>#</th><th>Player</th><th>P10 Pick</th><th>DNF1</th><th>Constructor</th><th style="text-align:right">Pts</th></tr></thead>
+                <tbody>${picksRowsHtml}</tbody>
+              </table>
+            </div>
+          </div>
+          <div>
+            <div class="section-title">Season Standings</div>
+            <div class="gp-sub">After Round ${roundNum}</div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>#</th><th>Player</th><th></th><th style="text-align:right">Points</th><th style="text-align:right">Races</th></tr></thead>
+                <tbody>${standingsRowsHtml}</tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>`;
+  }).join("");
+
+  const generatedDate = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+
+  const fullHtml = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/>
+<title>P10 · DNF1 · Constructors Challenge — 2026 Season Report</title>
+<style>${sharedCSS}</style></head>
+<body>
+<div class="cover">
+  <div class="cover-eyebrow">P10 · DNF1 · Constructors Challenge · 2026</div>
+  <div class="cover-title">SEASON REPORT</div>
+  <div class="cover-sub">Through Round ${completedRaces.length} of ${allRacesInOrder.length} · Generated ${generatedDate}</div>
+</div>
+${pagesHtml}
+</body></html>`;
+
+  const blob = new Blob([fullHtml], { type: "text/html" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `F1_Challenge_Season_Report_thru_Round${completedRaces.length}.html`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 // ─── ADMIN PANEL ─────────────────────────────────────────────────────────────
 
 function CommissionerGuide({ onBack }) {
@@ -1514,12 +1693,21 @@ function AdminPanel({ allResults, onSaveResults, standings, allPicks, onSavePick
           <button className={`tab ${adminTab==="picks"?"active":""}`} onClick={() => setAdminTab("picks")}>Player Picks</button>
           <button className={`tab ${adminTab==="settings"?"active":""}`} onClick={() => setAdminTab("settings")}>Settings</button>
         </nav>
-        <button
-          onClick={onHelp}
-          style={{background:"none",border:"1px solid #222",color:"#888",borderRadius:6,padding:"6px 16px",fontFamily:"'Barlow Condensed',sans-serif",fontSize:13,letterSpacing:"0.12em",textTransform:"uppercase",whiteSpace:"nowrap",transition:"all 0.15s",flexShrink:0}}
-          onMouseOver={e => { e.target.style.borderColor="#555"; e.target.style.color="#fff"; }}
-          onMouseOut={e => { e.target.style.borderColor="#222"; e.target.style.color="#888"; }}
-        >? Help</button>
+        <div style={{display:"flex",gap:8,flexShrink:0}}>
+          <button
+            onClick={() => generateSeasonReport({ allResults, allPicks, players: config?.players })}
+            style={{background:"none",border:"1px solid #333",color:"#999",borderRadius:6,padding:"6px 16px",fontFamily:"'Barlow Condensed',sans-serif",fontSize:13,letterSpacing:"0.12em",textTransform:"uppercase",whiteSpace:"nowrap",transition:"all 0.15s",cursor:"pointer"}}
+            onMouseOver={e => { e.currentTarget.style.borderColor="#e10600"; e.currentTarget.style.color="#fff"; }}
+            onMouseOut={e => { e.currentTarget.style.borderColor="#333"; e.currentTarget.style.color="#999"; }}
+            title="Download one combined HTML report: every completed race's results plus season standings as of that race"
+          >⬇ Season Report</button>
+          <button
+            onClick={onHelp}
+            style={{background:"none",border:"1px solid #222",color:"#888",borderRadius:6,padding:"6px 16px",fontFamily:"'Barlow Condensed',sans-serif",fontSize:13,letterSpacing:"0.12em",textTransform:"uppercase",whiteSpace:"nowrap",transition:"all 0.15s",flexShrink:0}}
+            onMouseOver={e => { e.target.style.borderColor="#555"; e.target.style.color="#fff"; }}
+            onMouseOut={e => { e.target.style.borderColor="#222"; e.target.style.color="#888"; }}
+          >? Help</button>
+        </div>
       </div>
       <div style={{borderBottom:"1px solid #111",marginBottom:28}} />
 
