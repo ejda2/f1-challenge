@@ -15,9 +15,9 @@ const PLAYERS = [
 
 const DRIVERS = [
   "Albon","Alonso","Antonelli","Bearman","Bortoleto","Bottas",
-  "Colapinto","Gasly","Hamilton","Hulkenberg","Lawson",
+  "Colapinto","Gasly","Hadjar","Hamilton","Hulkenberg","Lawson",
   "Leclerc","Lindblad","Norris","Ocon","Perez","Piastri",
-  "Russell","Sainz","Stroll","Tsunoda","Verstappen",
+  "Russell","Sainz","Stroll","Verstappen",
 ];
 
 const CONSTRUCTORS = [
@@ -31,7 +31,7 @@ const DRIVER_CONSTRUCTOR = {
   Norris:"McLaren",      Piastri:"McLaren",
   Verstappen:"Red Bull", Lawson:"Red Bull",
   Bearman:"Haas",        Ocon:"Haas",
-  Lindblad:"Racing Bulls", Tsunoda:"Racing Bulls",
+  Lindblad:"Racing Bulls", Hadjar:"Racing Bulls",
   Bortoleto:"Audi",      Hulkenberg:"Audi",
   Gasly:"Alpine",        Colapinto:"Alpine",
   Albon:"Williams",      Sainz:"Williams",
