@@ -1324,6 +1324,48 @@ ${pagesHtml}
   URL.revokeObjectURL(url);
 }
 
+// ─── ALL RESULTS EXPORT (commissioner data check) ────────────────────────────
+// One CSV file, one row per completed race in round order, with the full
+// entered finishing order (P1 → P22) and DNF1. Opens in Excel/Sheets and is
+// easy to upload to Claude for checking against official F1 classifications.
+
+function generateAllResultsCsv({ allResults }) {
+  const completedRaces = RACES.filter(r => !r.cancelled && allResults[r.id]);
+
+  if (completedRaces.length === 0) {
+    alert("No race results entered yet — nothing to export.");
+    return;
+  }
+
+  const csvCell = v => {
+    const s = v == null ? "" : String(v);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+
+  const header = ["Round", "Race", "Date"];
+  for (let i = 1; i <= DRIVERS.length; i++) header.push(`P${i}`);
+  header.push("DNF1");
+
+  const rows = completedRaces.map(race => {
+    const result = allResults[race.id];
+    const order = result.finishing_order || [];
+    const row = [getRoundNumber(race.id), race.name, race.date];
+    for (let i = 0; i < DRIVERS.length; i++) row.push(order[i] || "");
+    row.push(result.dnf1 || "None");
+    return row;
+  });
+
+  const csv = [header, ...rows].map(r => r.map(csvCell).join(",")).join("\r\n");
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `F1_Challenge_All_Results_thru_Round${completedRaces.length}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 // ─── ADMIN PANEL ─────────────────────────────────────────────────────────────
 
 function CommissionerGuide({ onBack }) {
@@ -1701,6 +1743,13 @@ function AdminPanel({ allResults, onSaveResults, standings, allPicks, onSavePick
             onMouseOut={e => { e.currentTarget.style.borderColor="#333"; e.currentTarget.style.color="#999"; }}
             title="Download one combined HTML report: every completed race's results plus season standings as of that race"
           >⬇ Season Report</button>
+          <button
+            onClick={() => generateAllResultsCsv({ allResults })}
+            style={{background:"none",border:"1px solid #333",color:"#999",borderRadius:6,padding:"6px 16px",fontFamily:"'Barlow Condensed',sans-serif",fontSize:13,letterSpacing:"0.12em",textTransform:"uppercase",whiteSpace:"nowrap",transition:"all 0.15s",cursor:"pointer"}}
+            onMouseOver={e => { e.currentTarget.style.borderColor="#e10600"; e.currentTarget.style.color="#fff"; }}
+            onMouseOut={e => { e.currentTarget.style.borderColor="#333"; e.currentTarget.style.color="#999"; }}
+            title="Download a CSV of every completed race: full P1–P22 finishing order plus DNF1"
+          >⬇ All Results</button>
           <button
             onClick={onHelp}
             style={{background:"none",border:"1px solid #222",color:"#888",borderRadius:6,padding:"6px 16px",fontFamily:"'Barlow Condensed',sans-serif",fontSize:13,letterSpacing:"0.12em",textTransform:"uppercase",whiteSpace:"nowrap",transition:"all 0.15s",flexShrink:0}}
